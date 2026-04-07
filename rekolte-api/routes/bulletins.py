@@ -1,21 +1,22 @@
 import io
+import json
 import datetime
 from bson import ObjectId
 from flask import Blueprint, request, jsonify
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
-from google.oauth2 import service_account
 from db import get_db
 from middleware.auth import require_auth
 from routes.notifications import create_notification
 import config
-import json
 
 bulletins_bp = Blueprint("bulletins", __name__)
 
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 
 def _get_drive_service():
+    # Lazy import so server starts even if google-api-python-client isn't cached yet
+    from googleapiclient.discovery import build
+    from google.oauth2 import service_account
+
     if config.GOOGLE_SERVICE_ACCOUNT_JSON:
         info = json.loads(config.GOOGLE_SERVICE_ACCOUNT_JSON)
         creds = service_account.Credentials.from_service_account_info(info, scopes=DRIVE_SCOPES)
@@ -76,6 +77,7 @@ def upload_bulletin():
     folder_id = _get_folder_id(season)
 
     try:
+        from googleapiclient.http import MediaIoBaseUpload
         service = _get_drive_service()
         file_bytes = file.read()
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype="application/pdf")

@@ -119,6 +119,13 @@ def predict():
         "created_at": datetime.datetime.utcnow(),
     }
     db.predictions.insert_one(prediction_record)
+
+    from routes.notifications import create_notification
+    create_notification(db, "prediction",
+        f"Prediction run for {region}: {round(predicted_tch, 2)} TCH (season {season_year})",
+        {"region": region, "season": season_year, "predicted_tch": round(predicted_tch, 2)}
+    )
+
     prediction_record.pop("_id", None)
     prediction_record["created_at"] = prediction_record["created_at"].isoformat()
     if prediction_record["ndvi_snapshot"].get("extracted_at"):

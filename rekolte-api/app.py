@@ -7,6 +7,7 @@ from routes.harvest import harvest_bp
 from routes.bulletins import bulletins_bp
 from routes.model_mgmt import model_mgmt_bp
 from routes.reports import reports_bp
+from routes.notifications import notifications_bp
 
 def create_app():
     app = Flask(__name__)
@@ -19,6 +20,7 @@ def create_app():
     app.register_blueprint(bulletins_bp, url_prefix=prefix)
     app.register_blueprint(model_mgmt_bp, url_prefix=prefix)
     app.register_blueprint(reports_bp, url_prefix=prefix)
+    app.register_blueprint(notifications_bp, url_prefix=prefix)
 
     @app.route("/api/ping")
     def ping():

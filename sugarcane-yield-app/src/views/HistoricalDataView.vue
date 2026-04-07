@@ -1,263 +1,319 @@
 <template>
   <ion-page>
-    <div class="min-h-screen bg-background-light text-slate-900 font-sans flex">
+    <div class="min-h-screen bg-parchment text-slate-900 font-sans flex flex-col">
+      <NavBar />
 
-      <!-- Sidebar -->
-      <aside class="w-72 bg-white border-r border-border-muted flex flex-col h-screen sticky top-0 overflow-y-auto">
-        <div class="p-6 flex flex-col gap-8">
-          <!-- Brand -->
-          <div class="flex items-center gap-3">
-            <div class="bg-primary rounded-lg p-2 text-white">
-              <span class="material-symbols-outlined text-2xl">potted_plant</span>
-            </div>
-            <div class="flex flex-col">
-              <h1 class="text-primary text-xl font-black leading-none uppercase tracking-tighter">Rékolte</h1>
-              <p class="text-sage text-xs font-medium uppercase tracking-widest">Agricultural Analytics</p>
-            </div>
+      <main class="max-w-7xl mx-auto px-6 py-8 w-full flex flex-col gap-8">
+
+        <!-- Page Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-3xl font-black text-primary">Historical Harvest Analysis</h2>
+            <p class="text-slate-500 text-sm mt-1">{{ filteredData.length }} records · Seasons 2008–2025</p>
           </div>
-
-          <!-- Nav -->
-          <nav class="flex flex-col gap-1">
-            <router-link to="/dashboard" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-primary/10 hover:text-primary transition-colors">
-              <span class="material-symbols-outlined">dashboard</span>
-              <span class="text-sm font-semibold">Dashboard</span>
-            </router-link>
-            <router-link to="/history" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary">
-              <span class="material-symbols-outlined">history</span>
-              <span class="text-sm font-semibold">Historical Data</span>
-            </router-link>
-            <router-link to="/regions" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-primary/10 hover:text-primary transition-colors">
-              <span class="material-symbols-outlined">map</span>
-              <span class="text-sm font-semibold">Regions</span>
-            </router-link>
-            <router-link to="/compare" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-primary/10 hover:text-primary transition-colors">
-              <span class="material-symbols-outlined">compare_arrows</span>
-              <span class="text-sm font-semibold">Compare Models</span>
-            </router-link>
-          </nav>
-
-          <div class="h-px bg-border-muted"></div>
-
-          <!-- Filters -->
-          <div class="flex flex-col gap-5">
-            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Filters</h3>
-            <div class="flex flex-col gap-2">
-              <label class="text-sm font-semibold text-slate-700">Region</label>
-              <select v-model="filterRegion" class="w-full rounded-lg border-border-muted bg-parchment text-sm focus:ring-primary focus:border-primary">
-                <option value="">All Regions</option>
-                <option v-for="r in regions" :key="r.id" :value="r.id">{{ r.label }}</option>
-              </select>
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
+              <input
+                v-model="searchQuery"
+                class="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm w-56 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                placeholder="Search records…"
+              />
             </div>
-            <div class="flex flex-col gap-2">
-              <label class="text-sm font-semibold text-slate-700">Season Year</label>
-              <select v-model="filterSeason" class="w-full rounded-lg border-border-muted bg-parchment text-sm focus:ring-primary focus:border-primary">
-                <option value="">All Seasons</option>
-                <option v-for="s in seasons" :key="s" :value="s">{{ s }}</option>
-              </select>
-            </div>
-            <button @click="applyFilters" class="w-full bg-primary text-white py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
-              <span class="material-symbols-outlined text-sm">filter_list</span>
-              Apply Filters
-            </button>
-            <button @click="clearFilters" class="w-full border border-border-muted text-slate-500 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all">
+            <button
+              class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"
+              @click="clearFilters"
+            >
+              <span class="material-symbols-outlined text-sm">filter_list_off</span>
               Clear
             </button>
           </div>
         </div>
-        <div class="mt-auto p-6 flex flex-col gap-2">
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 hover:text-primary transition-colors" href="#">
-            <span class="material-symbols-outlined text-lg">help</span>
-            <span class="text-sm font-medium">Data Sources</span>
-          </a>
+
+        <!-- Filters row -->
+        <div class="flex flex-wrap gap-4 bg-white rounded-xl border border-slate-200 px-6 py-4 shadow-sm">
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Region</label>
+            <select v-model="filterRegion" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-primary bg-parchment focus:ring-primary focus:border-primary outline-none">
+              <option value="">All Regions</option>
+              <option v-for="r in REGIONS" :key="r" :value="r">{{ regionLabel(r) }}</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Season</label>
+            <select v-model="filterSeason" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-primary bg-parchment focus:ring-primary focus:border-primary outline-none">
+              <option value="">All Seasons</option>
+              <option v-for="s in seasons" :key="s" :value="s">{{ s }}</option>
+            </select>
+          </div>
         </div>
-      </aside>
 
-      <!-- Main -->
-      <main class="flex-1 flex flex-col overflow-x-hidden">
-        <!-- Header -->
-        <header class="h-20 bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-border-muted px-8 flex items-center justify-between">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900">Historical Harvest Analysis</h2>
-            <p class="text-xs text-sage font-medium">{{ filteredData.length }} records · Seasons 2008–2025</p>
-          </div>
-          <div class="flex items-center gap-4">
-            <div class="relative">
-              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-              <input
-                v-model="searchQuery"
-                class="pl-10 pr-4 py-2 bg-background-light border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-primary/20"
-                placeholder="Search records..."
-                type="text"
-              />
+        <!-- Bar Chart -->
+        <section class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="text-lg font-bold text-slate-900">Annual TCH by Region</h3>
+              <p class="text-sm text-slate-500">Compare all 5 regions for a selected season</p>
             </div>
-            <button class="bg-white border border-border-muted text-slate-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors">
-              <span class="material-symbols-outlined text-sm">download</span>
-              Export CSV
-            </button>
+            <select v-model="chartSeason" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-primary bg-white outline-none">
+              <option v-for="s in seasons" :key="s" :value="s">{{ s }}</option>
+            </select>
           </div>
-        </header>
+          <div v-if="loading" class="flex items-center justify-center h-32">
+            <svg class="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+            </svg>
+          </div>
+          <Bar v-else :data="barChartData" :options="barChartOptions" class="max-h-64" />
+        </section>
 
-        <div class="p-8 flex flex-col gap-8 max-w-7xl mx-auto w-full">
-
-          <!-- Bar Chart -->
-          <section class="bg-white rounded-xl border border-border-muted p-6 shadow-sm">
-            <div class="flex justify-between items-center mb-6">
-              <div>
-                <h3 class="text-lg font-bold text-slate-900">Annual TCH by Region</h3>
-                <p class="text-sm text-slate-500">Select a season to compare all 5 regions</p>
-              </div>
-              <select v-model="chartSeason" class="border border-border-muted rounded-lg px-3 py-1.5 text-sm font-semibold text-primary bg-white">
+        <!-- Bulletins Section -->
+        <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-primary/5">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">description</span>
+              <h3 class="font-bold text-primary">Harvest Bulletins</h3>
+              <span class="text-xs text-slate-400">({{ bulletins.length }} files)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <select v-model="bulletinSeasonFilter" class="border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary bg-white outline-none">
+                <option value="">All Seasons</option>
                 <option v-for="s in seasons" :key="s" :value="s">{{ s }}</option>
               </select>
+              <label class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold cursor-pointer hover:bg-primary/90 transition-colors">
+                <span class="material-symbols-outlined text-sm">upload</span>
+                Upload PDF
+                <input type="file" accept=".pdf" class="hidden" @change="handleBulletinUpload" />
+              </label>
             </div>
-            <Bar :data="barChartData" :options="barChartOptions" class="max-h-64" />
-          </section>
+          </div>
 
-          <!-- Data Table -->
-          <section class="bg-white rounded-xl border border-border-muted overflow-hidden shadow-sm">
-            <div class="px-6 py-5 border-b border-border-muted flex justify-between items-center bg-parchment/50">
-              <h3 class="font-bold text-slate-900">Season-End Records</h3>
-              <span class="text-xs font-medium text-slate-500">Showing {{ paginatedData.length }} of {{ filteredData.length }}</span>
+          <!-- Upload form (shown after file selected) -->
+          <div v-if="pendingFile" class="px-6 py-4 bg-parchment border-b border-slate-200 flex items-center gap-4 flex-wrap">
+            <span class="text-sm font-medium text-slate-700">{{ pendingFile.name }}</span>
+            <select v-model="uploadType" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-primary bg-white outline-none">
+              <option value="weekly">Weekly Bulletin</option>
+              <option value="crop_report">Crop Report</option>
+              <option value="other">Other</option>
+            </select>
+            <input v-model="uploadSeason" type="number" placeholder="Season (year)" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-36 outline-none" />
+            <input v-model="uploadWeek" type="number" placeholder="Week #" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-28 outline-none" />
+            <button
+              class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+              :disabled="uploading"
+              @click="confirmUpload"
+            >
+              <svg v-if="uploading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+              </svg>
+              {{ uploading ? 'Uploading…' : 'Confirm Upload' }}
+            </button>
+            <button class="text-slate-400 hover:text-slate-600 text-sm" @click="pendingFile = null">Cancel</button>
+          </div>
+
+          <div v-if="bulletinLoading" class="flex items-center justify-center py-8">
+            <svg class="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+            </svg>
+          </div>
+          <div v-else-if="filteredBulletins.length === 0" class="px-6 py-8 text-center text-slate-400 text-sm">
+            No bulletins found. Upload a PDF to get started.
+          </div>
+          <div v-else class="divide-y divide-slate-100">
+            <div
+              v-for="b in filteredBulletins" :key="b._id"
+              class="flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors"
+            >
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary/40">picture_as_pdf</span>
+                <div>
+                  <p class="text-sm font-semibold text-slate-800">{{ b.filename }}</p>
+                  <p class="text-xs text-slate-400">
+                    Season {{ b.season ?? '—' }}
+                    <span v-if="b.week"> · Week {{ b.week }}</span>
+                    · {{ b.type }}
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <a :href="b.preview_url" target="_blank" class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">visibility</span> View
+                </a>
+                <a :href="b.download_url" target="_blank" class="text-xs font-bold text-accent hover:underline flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">download</span> Download
+                </a>
+                <button class="text-red-400 hover:text-red-600 ml-2" @click="deleteBulletin(b._id)">
+                  <span class="material-symbols-outlined text-sm">delete</span>
+                </button>
+              </div>
             </div>
-            <div class="overflow-x-auto custom-scrollbar">
-              <table class="w-full text-left border-collapse">
-                <thead>
-                  <tr class="bg-slate-50 text-slate-500 uppercase text-[10px] font-black tracking-widest">
-                    <th class="px-6 py-4 cursor-pointer hover:text-primary" @click="sort('season')">
-                      Season <span class="material-symbols-outlined text-xs align-middle">{{ sortField === 'season' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}</span>
-                    </th>
-                    <th class="px-6 py-4">Region</th>
-                    <th class="px-6 py-4 cursor-pointer hover:text-primary" @click="sort('surface_harvested')">Surface (Ha)</th>
-                    <th class="px-6 py-4">Cane (T)</th>
-                    <th class="px-6 py-4">Sugar (T)</th>
-                    <th class="px-6 py-4">Ext (%)</th>
-                    <th class="px-6 py-4 cursor-pointer hover:text-primary" @click="sort('tch')">
-                      TCH <span class="material-symbols-outlined text-xs align-middle">{{ sortField === 'tch' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}</span>
-                    </th>
-                    <th class="px-6 py-4">TSH</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-border-muted">
-                  <tr
-                    v-for="row in paginatedData"
-                    :key="`${row.season}-${row.region}`"
-                    class="hover:bg-slate-50 transition-colors"
-                  >
-                    <td class="px-6 py-4 font-bold text-sm">{{ row.season }}</td>
-                    <td class="px-6 py-4">
-                      <div class="flex items-center gap-2">
-                        <span class="size-2 rounded-full" :style="{ backgroundColor: regionColor(row.region) }"></span>
-                        <span class="text-sm font-medium">{{ regionLabel(row.region) }}</span>
-                      </div>
-                    </td>
-                    <td class="px-6 py-4 text-sm font-semibold">{{ row.surface_harvested.toLocaleString() }}</td>
-                    <td class="px-6 py-4 text-sm font-semibold">{{ row.cane_production.toLocaleString() }}</td>
-                    <td class="px-6 py-4 text-sm font-semibold">{{ row.sugar_production?.toLocaleString() ?? '—' }}</td>
-                    <td class="px-6 py-4 text-sm font-bold text-primary">{{ row.extraction_rate ?? '—' }}</td>
-                    <td class="px-6 py-4">
-                      <span
-                        class="text-sm font-bold px-2 py-0.5 rounded"
-                        :class="row.tch >= 80 ? 'bg-primary/10 text-primary' : row.tch >= 70 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'"
-                      >{{ row.tch }}</span>
-                    </td>
-                    <td class="px-6 py-4 text-sm font-bold">{{ row.tsh ?? '—' }}</td>
-                  </tr>
-                </tbody>
-                <tfoot class="bg-parchment/80 font-bold border-t border-border-muted">
-                  <tr>
-                    <td class="px-6 py-4 text-sm uppercase" colspan="6">Average (filtered)</td>
-                    <td class="px-6 py-4 text-sm text-primary">{{ filteredAvgTch }}</td>
-                    <td class="px-6 py-4 text-sm">{{ filteredAvgTsh }}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
+
+        <!-- Data Table -->
+        <section class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-parchment/50">
+            <h3 class="font-bold text-slate-900">Season-End Records</h3>
+            <span class="text-xs font-medium text-slate-500">Showing {{ paginatedData.length }} of {{ filteredData.length }}</span>
+          </div>
+          <div v-if="loading" class="flex items-center justify-center py-12">
+            <svg class="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+            </svg>
+          </div>
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 uppercase text-[10px] font-black tracking-widest">
+                  <th class="px-6 py-4 cursor-pointer hover:text-primary" @click="sort('season')">
+                    Season <span class="material-symbols-outlined text-xs align-middle">{{ sortIcon('season') }}</span>
+                  </th>
+                  <th class="px-6 py-4">Region</th>
+                  <th class="px-6 py-4 cursor-pointer hover:text-primary" @click="sort('surface_harvested')">Surface (Ha)</th>
+                  <th class="px-6 py-4">Cane (T)</th>
+                  <th class="px-6 py-4">Sugar (T)</th>
+                  <th class="px-6 py-4">Ext (%)</th>
+                  <th class="px-6 py-4 cursor-pointer hover:text-primary" @click="sort('tch')">
+                    TCH <span class="material-symbols-outlined text-xs align-middle">{{ sortIcon('tch') }}</span>
+                  </th>
+                  <th class="px-6 py-4">TSH</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="row in paginatedData" :key="`${row.season}-${row.region}`" class="hover:bg-slate-50 transition-colors">
+                  <td class="px-6 py-4 font-bold text-sm">{{ row.season }}</td>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <span class="size-2 rounded-full bg-primary"></span>
+                      <span class="text-sm font-medium">{{ regionLabel(row.region) }}</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-sm font-semibold">{{ row.surface_harvested?.toLocaleString() ?? '—' }}</td>
+                  <td class="px-6 py-4 text-sm font-semibold">{{ row.cane_production?.toLocaleString() ?? '—' }}</td>
+                  <td class="px-6 py-4 text-sm font-semibold">{{ row.sugar_production?.toLocaleString() ?? '—' }}</td>
+                  <td class="px-6 py-4 text-sm font-bold text-primary">{{ row.extraction_rate ?? '—' }}</td>
+                  <td class="px-6 py-4">
+                    <span class="text-sm font-bold px-2 py-0.5 rounded"
+                      :class="row.tch >= 80 ? 'bg-primary/10 text-primary' : row.tch >= 70 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'">
+                      {{ row.tch }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm font-bold">{{ row.tsh ?? '—' }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-parchment/80 font-bold border-t border-slate-200">
+                <tr>
+                  <td class="px-6 py-4 text-sm uppercase" colspan="6">Average (filtered)</td>
+                  <td class="px-6 py-4 text-sm text-primary">{{ filteredAvgTch }}</td>
+                  <td class="px-6 py-4 text-sm">{{ filteredAvgTsh }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
 
         <!-- Pagination -->
-        <footer class="p-8 pt-0 max-w-7xl mx-auto w-full flex items-center justify-between">
+        <div class="flex items-center justify-between pb-8">
           <div class="flex items-center gap-2">
-            <button
-              class="p-2 rounded-lg border border-border-muted hover:bg-white transition-colors disabled:opacity-50"
-              :disabled="currentPage === 1"
-              @click="currentPage--"
-            >
+            <button class="p-2 rounded-lg border border-slate-200 hover:bg-white disabled:opacity-50" :disabled="currentPage === 1" @click="currentPage--">
               <span class="material-symbols-outlined">chevron_left</span>
             </button>
             <div class="flex gap-1">
               <button
-                v-for="p in totalPages"
-                :key="p"
-                @click="currentPage = p"
+                v-for="p in totalPages" :key="p" @click="currentPage = p"
                 class="w-8 h-8 rounded-lg text-xs font-bold transition-colors"
-                :class="currentPage === p ? 'bg-primary text-white' : 'border border-border-muted hover:bg-white'"
+                :class="currentPage === p ? 'bg-primary text-white' : 'border border-slate-200 hover:bg-white'"
               >{{ p }}</button>
             </div>
-            <button
-              class="p-2 rounded-lg border border-border-muted hover:bg-white transition-colors disabled:opacity-50"
-              :disabled="currentPage === totalPages"
-              @click="currentPage++"
-            >
+            <button class="p-2 rounded-lg border border-slate-200 hover:bg-white disabled:opacity-50" :disabled="currentPage === totalPages" @click="currentPage++">
               <span class="material-symbols-outlined">chevron_right</span>
             </button>
           </div>
-          <p class="text-xs text-sage font-medium italic">Source: Mauritius Chamber of Agriculture Harvest Bulletins</p>
-        </footer>
+          <p class="text-xs text-slate-400 italic">Source: Mauritius Chamber of Agriculture Harvest Bulletins</p>
+        </div>
       </main>
     </div>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { IonPage } from '@ionic/vue'
 import { Bar } from 'vue-chartjs'
-import {
-  Chart as ChartJS, CategoryScale, LinearScale,
-  BarElement, Title, Tooltip, Legend,
-} from 'chart.js'
-import { regions, historicalData, type Region, type HarvestRecord } from '@/data/mockData'
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
+import NavBar from '@/components/NavBar.vue'
+import { getHarvest, getBulletins, uploadBulletin, deleteBulletin as apiDeleteBulletin } from '@/services/api'
+import type { HarvestRecord, BulletinDoc } from '@/services/api'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
+const REGIONS = ['NORD', 'EST', 'SUD', 'OUEST', 'CENTRE']
+const REGION_COLORS: Record<string, string> = {
+  NORD: '#2d5016', EST: '#3a6b1d', SUD: '#4a8524', OUEST: '#C8891A', CENTRE: '#7c6b3a',
+}
+
+const loading = ref(true)
+const bulletinLoading = ref(true)
+const uploading = ref(false)
+const allData = ref<HarvestRecord[]>([])
+const bulletins = ref<BulletinDoc[]>([])
+
+// Upload state
+const pendingFile = ref<File | null>(null)
+const uploadType = ref('weekly')
+const uploadSeason = ref<number | ''>('')
+const uploadWeek = ref<number | ''>('')
+
 // Filters
-const filterRegion = ref<Region | ''>('')
+const filterRegion = ref('')
 const filterSeason = ref<number | ''>('')
-const searchQuery  = ref('')
-const chartSeason  = ref(2025)
+const searchQuery = ref('')
+const chartSeason = ref(2025)
+const bulletinSeasonFilter = ref<number | ''>('')
 
 // Sorting
 const sortField = ref<keyof HarvestRecord>('season')
-const sortDir   = ref<'asc' | 'desc'>('desc')
+const sortDir = ref<'asc' | 'desc'>('desc')
 
 // Pagination
 const currentPage = ref(1)
-const PAGE_SIZE   = 15
+const PAGE_SIZE = 15
 
 const seasons = computed(() =>
-  [...new Set(historicalData.map(d => d.season))].sort((a, b) => b - a)
+  [...new Set(allData.value.map(d => d.season))].sort((a, b) => b - a)
 )
 
-function applyFilters() { currentPage.value = 1 }
+onMounted(async () => {
+  const [harvest, buls] = await Promise.all([getHarvest(), getBulletins()])
+  allData.value = harvest
+  bulletins.value = buls
+  if (seasons.value.length) chartSeason.value = seasons.value[0]
+  loading.value = false
+  bulletinLoading.value = false
+})
+
 function clearFilters() {
   filterRegion.value = ''
   filterSeason.value = ''
-  searchQuery.value  = ''
-  currentPage.value  = 1
+  searchQuery.value = ''
+  currentPage.value = 1
 }
 
 function sort(field: keyof HarvestRecord) {
-  if (sortField.value === field) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortField.value = field
-    sortDir.value = 'desc'
-  }
+  if (sortField.value === field) sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  else { sortField.value = field; sortDir.value = 'desc' }
+}
+function sortIcon(field: string) {
+  if (sortField.value !== field) return 'unfold_more'
+  return sortDir.value === 'asc' ? 'arrow_upward' : 'arrow_downward'
 }
 
 const filteredData = computed(() => {
-  let data = [...historicalData]
+  let data = [...allData.value]
   if (filterRegion.value) data = data.filter(d => d.region === filterRegion.value)
   if (filterSeason.value) data = data.filter(d => d.season === filterSeason.value)
   if (searchQuery.value) {
@@ -265,43 +321,71 @@ const filteredData = computed(() => {
     data = data.filter(d => d.region.toLowerCase().includes(q) || d.season.toString().includes(q))
   }
   data.sort((a, b) => {
-    const av = a[sortField.value] as number ?? 0
-    const bv = b[sortField.value] as number ?? 0
+    const av = (a[sortField.value] as number) ?? 0
+    const bv = (b[sortField.value] as number) ?? 0
     return sortDir.value === 'asc' ? av - bv : bv - av
   })
   return data
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredData.value.length / PAGE_SIZE)))
-
 const paginatedData = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE
   return filteredData.value.slice(start, start + PAGE_SIZE)
 })
-
 const filteredAvgTch = computed(() => {
   const vals = filteredData.value.map(d => d.tch)
   return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : '—'
 })
-
 const filteredAvgTsh = computed(() => {
   const vals = filteredData.value.filter(d => d.tsh !== null).map(d => d.tsh as number)
   return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : '—'
 })
 
-function regionLabel(id: Region) { return regions.find(r => r.id === id)?.label ?? id }
-function regionColor(id: Region) { return regions.find(r => r.id === id)?.color ?? '#2d5016' }
+const filteredBulletins = computed(() => {
+  if (!bulletinSeasonFilter.value) return bulletins.value
+  return bulletins.value.filter(b => b.season === bulletinSeasonFilter.value)
+})
 
-// Bar chart for selected season
+function handleBulletinUpload(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) pendingFile.value = file
+}
+
+async function confirmUpload() {
+  if (!pendingFile.value) return
+  uploading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', pendingFile.value)
+    fd.append('type', uploadType.value)
+    if (uploadSeason.value) fd.append('season', String(uploadSeason.value))
+    if (uploadWeek.value) fd.append('week', String(uploadWeek.value))
+    await uploadBulletin(fd)
+    bulletins.value = await getBulletins()
+    pendingFile.value = null
+  } catch (e: any) {
+    alert('Upload failed: ' + e.message)
+  } finally {
+    uploading.value = false
+  }
+}
+
+async function deleteBulletin(id: string) {
+  if (!confirm('Delete this bulletin?')) return
+  await apiDeleteBulletin(id)
+  bulletins.value = bulletins.value.filter(b => b._id !== id)
+}
+
 const barChartData = computed(() => {
-  const rows = historicalData.filter(d => d.season === chartSeason.value)
+  const rows = allData.value.filter(d => d.season === chartSeason.value)
   return {
     labels: rows.map(r => regionLabel(r.region)),
     datasets: [{
       label: 'TCH',
       data: rows.map(r => r.tch),
-      backgroundColor: rows.map(r => regionColor(r.region) + 'cc'),
-      borderColor: rows.map(r => regionColor(r.region)),
+      backgroundColor: rows.map(r => (REGION_COLORS[r.region] ?? '#2d5016') + 'cc'),
+      borderColor: rows.map(r => REGION_COLORS[r.region] ?? '#2d5016'),
       borderWidth: 2,
       borderRadius: 6,
     }],
@@ -313,18 +397,16 @@ const barChartOptions = {
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
-    tooltip: {
-      backgroundColor: '#2d5016',
-      callbacks: { label: (ctx: any) => ` ${ctx.parsed.y} TCH` },
-    },
+    tooltip: { backgroundColor: '#2d5016', callbacks: { label: (ctx: any) => ` ${ctx.parsed.y} TCH` } },
   },
   scales: {
-    x: { grid: { display: false }, ticks: { font: { family: 'Work Sans' }, color: '#64748b' } },
-    y: {
-      grid: { color: 'rgba(0,0,0,0.05)' },
-      ticks: { font: { family: 'Work Sans' }, color: '#64748b' },
-      suggestedMin: 40,
-    },
+    x: { grid: { display: false }, ticks: { color: '#64748b' } },
+    y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#64748b' }, suggestedMin: 40 },
   },
+}
+
+function regionLabel(id: string) {
+  const labels: Record<string, string> = { NORD: 'Nord', EST: 'Est', SUD: 'Sud', OUEST: 'Ouest', CENTRE: 'Centre' }
+  return labels[id] ?? id
 }
 </script>

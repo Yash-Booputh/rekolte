@@ -1,29 +1,7 @@
 <template>
   <ion-page>
-    <div class="min-h-screen bg-background-light text-slate-900 font-sans">
-
-      <!-- Navigation -->
-      <header class="flex items-center justify-between border-b border-primary/10 px-10 py-3 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div class="flex items-center gap-8">
-          <div class="flex items-center gap-4 text-primary">
-            <div class="size-8 flex items-center justify-center bg-primary rounded-lg text-white">
-              <span class="material-symbols-outlined">eco</span>
-            </div>
-            <h2 class="text-slate-900 font-bold text-lg tracking-tight">Rékolte</h2>
-          </div>
-          <nav class="hidden md:flex items-center gap-6">
-            <router-link to="/dashboard" class="text-slate-600 hover:text-primary text-sm font-medium transition-colors">Dashboard</router-link>
-            <router-link to="/regions"   class="text-slate-600 hover:text-primary text-sm font-medium transition-colors">Regions</router-link>
-            <router-link to="/history"   class="text-slate-600 hover:text-primary text-sm font-medium transition-colors">History</router-link>
-            <router-link to="/compare"   class="text-primary text-sm font-bold border-b-2 border-primary py-1">Compare</router-link>
-          </nav>
-        </div>
-        <div class="flex gap-2">
-          <button class="flex items-center justify-center rounded-xl size-10 bg-primary/5 text-primary hover:bg-primary/10 transition-colors">
-            <span class="material-symbols-outlined">notifications</span>
-          </button>
-        </div>
-      </header>
+    <div class="min-h-screen bg-parchment text-slate-900 font-sans flex flex-col">
+      <NavBar />
 
       <main class="max-w-[1200px] mx-auto w-full px-6 py-8">
 
@@ -36,157 +14,202 @@
             </div>
             <h1 class="text-4xl font-black text-slate-900 tracking-tight">Random Forest vs. XGBoost</h1>
             <p class="text-slate-500 max-w-2xl text-lg">
-              Evaluation of sugarcane TCH prediction models using Leave-One-Season-Out cross-validation (18 seasons × 5 regions).
+              Evaluation using Leave-One-Season-Out cross-validation (18 seasons × 5 regions) and 2025 holdout test.
             </p>
           </div>
           <div class="flex bg-white p-1 rounded-xl shadow-sm border border-primary/10">
             <button
-              @click="evalSet = 'test'"
-              :class="evalSet === 'test' ? 'bg-primary text-white' : 'text-slate-500 hover:bg-primary/5'"
+              @click="evalSet = 'loso'"
+              :class="evalSet === 'loso' ? 'bg-primary text-white' : 'text-slate-500 hover:bg-primary/5'"
               class="px-6 py-2 rounded-lg text-sm font-bold transition-colors"
             >LOSO CV</button>
             <button
-              @click="evalSet = 'train'"
-              :class="evalSet === 'train' ? 'bg-primary text-white' : 'text-slate-500 hover:bg-primary/5'"
+              @click="evalSet = 'test'"
+              :class="evalSet === 'test' ? 'bg-primary text-white' : 'text-slate-500 hover:bg-primary/5'"
               class="px-6 py-2 rounded-lg text-sm font-bold transition-colors"
-            >Train Set</button>
+            >2025 Holdout</button>
           </div>
         </div>
 
-        <!-- Metric Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-
-          <!-- RMSE -->
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-primary/10 relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10">
-              <span class="material-symbols-outlined text-4xl">analytics</span>
-            </div>
-            <h3 class="text-slate-500 font-semibold text-sm mb-4">RMSE <span class="text-xs text-slate-400">(lower is better)</span></h3>
-            <div class="flex items-center justify-between">
-              <div class="space-y-1">
-                <p class="text-xs text-slate-400 uppercase font-bold">Random Forest</p>
-                <p class="text-2xl font-bold text-slate-600">{{ rfMetrics.rmse }}</p>
-              </div>
-              <div class="h-10 w-px bg-primary/10"></div>
-              <div class="space-y-1 text-right">
-                <p class="text-xs text-primary uppercase font-bold">XGBoost</p>
-                <p class="text-3xl font-black text-primary">{{ xgbMetrics.rmse }}</p>
-              </div>
-            </div>
-            <div class="mt-4 flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-lg w-fit">
-              <span class="material-symbols-outlined text-sm font-bold">verified</span>
-              <span class="text-xs font-bold uppercase tracking-tight">XGBoost {{ rmseWinPct }}% better</span>
-            </div>
-          </div>
-
-          <!-- MAE -->
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-primary/10 relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10">
-              <span class="material-symbols-outlined text-4xl">straighten</span>
-            </div>
-            <h3 class="text-slate-500 font-semibold text-sm mb-4">MAE <span class="text-xs text-slate-400">(lower is better)</span></h3>
-            <div class="flex items-center justify-between">
-              <div class="space-y-1">
-                <p class="text-xs text-slate-400 uppercase font-bold">Random Forest</p>
-                <p class="text-2xl font-bold text-slate-600">{{ rfMetrics.mae }}</p>
-              </div>
-              <div class="h-10 w-px bg-primary/10"></div>
-              <div class="space-y-1 text-right">
-                <p class="text-xs text-primary uppercase font-bold">XGBoost</p>
-                <p class="text-3xl font-black text-primary">{{ xgbMetrics.mae }}</p>
-              </div>
-            </div>
-            <div class="mt-4 flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-lg w-fit">
-              <span class="material-symbols-outlined text-sm font-bold">verified</span>
-              <span class="text-xs font-bold uppercase tracking-tight">XGBoost {{ maeWinPct }}% better</span>
-            </div>
-          </div>
-
-          <!-- R² -->
-          <div class="bg-white rounded-xl p-6 shadow-sm border border-primary/10 relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10">
-              <span class="material-symbols-outlined text-4xl">legend_toggle</span>
-            </div>
-            <h3 class="text-slate-500 font-semibold text-sm mb-4">R² Score <span class="text-xs text-slate-400">(higher is better)</span></h3>
-            <div class="flex items-center justify-between">
-              <div class="space-y-1">
-                <p class="text-xs text-slate-400 uppercase font-bold">Random Forest</p>
-                <p class="text-2xl font-bold text-slate-600">{{ rfMetrics.r2 }}</p>
-              </div>
-              <div class="h-10 w-px bg-primary/10"></div>
-              <div class="space-y-1 text-right">
-                <p class="text-xs text-primary uppercase font-bold">XGBoost</p>
-                <p class="text-3xl font-black text-primary">{{ xgbMetrics.r2 }}</p>
-              </div>
-            </div>
-            <div class="mt-4 flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-lg w-fit">
-              <span class="material-symbols-outlined text-sm font-bold">verified</span>
-              <span class="text-xs font-bold uppercase tracking-tight">XGBoost {{ r2WinPct }}% better</span>
-            </div>
-          </div>
+        <div v-if="loading" class="flex items-center justify-center py-20">
+          <svg class="animate-spin h-10 w-10 text-primary" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
         </div>
 
-        <!-- Scatter Plot: Predicted vs Actual -->
-        <div class="bg-white rounded-xl p-8 shadow-sm border border-primary/10 mb-10">
-          <div class="flex items-center justify-between mb-8">
-            <div>
-              <h2 class="text-xl font-bold text-slate-900">Predicted vs. Actual TCH</h2>
-              <p class="text-slate-500 text-sm">Each point = one region-season prediction · Diagonal = perfect prediction</p>
-            </div>
-            <div class="flex items-center gap-6">
-              <div class="flex items-center gap-2">
-                <span class="size-3 rounded-full bg-slate-300"></span>
-                <span class="text-sm font-medium text-slate-600">Random Forest</span>
+        <template v-else>
+          <!-- Metric Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-primary/10 relative overflow-hidden">
+              <h3 class="text-slate-500 font-semibold text-sm mb-4">RMSE <span class="text-xs text-slate-400">(lower is better)</span></h3>
+              <div class="flex items-center justify-between">
+                <div class="space-y-1">
+                  <p class="text-xs text-slate-400 uppercase font-bold">Random Forest</p>
+                  <p class="text-2xl font-bold text-slate-600">{{ rfMetric('rmse') }}</p>
+                </div>
+                <div class="h-10 w-px bg-primary/10"></div>
+                <div class="space-y-1 text-right">
+                  <p class="text-xs text-primary uppercase font-bold">XGBoost</p>
+                  <p class="text-3xl font-black text-primary">{{ xgbMetric('rmse') }}</p>
+                </div>
               </div>
-              <div class="flex items-center gap-2">
-                <span class="size-3 rounded-full bg-primary"></span>
-                <span class="text-sm font-medium text-slate-600">XGBoost</span>
+              <div class="mt-4 flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-lg w-fit">
+                <span class="material-symbols-outlined text-sm font-bold">verified</span>
+                <span class="text-xs font-bold uppercase">XGBoost {{ rmseWinPct }}% better</span>
               </div>
             </div>
-          </div>
-          <Scatter :data="scatterData" :options="scatterOptions" class="max-h-96" />
-        </div>
 
-        <!-- Feature Importance -->
-        <div class="bg-white rounded-xl p-8 shadow-sm border border-primary/10">
-          <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-            <div>
-              <h2 class="text-xl font-bold text-slate-900">Feature Importance Comparison</h2>
-              <p class="text-slate-500 text-sm">Relative contribution of NDVI features and seasonal variables</p>
-            </div>
-          </div>
-          <div class="space-y-6">
-            <div v-for="feat in mergedFeatures" :key="feat.feature" class="space-y-2">
-              <div class="flex justify-between text-sm font-bold">
-                <span class="text-slate-700">{{ feat.feature }}</span>
-                <span class="text-primary">XGB: {{ feat.xgb }} · RF: {{ feat.rf }}</span>
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-primary/10">
+              <h3 class="text-slate-500 font-semibold text-sm mb-4">MAE <span class="text-xs text-slate-400">(lower is better)</span></h3>
+              <div class="flex items-center justify-between">
+                <div class="space-y-1">
+                  <p class="text-xs text-slate-400 uppercase font-bold">Random Forest</p>
+                  <p class="text-2xl font-bold text-slate-600">{{ rfMetric('mae') }}</p>
+                </div>
+                <div class="h-10 w-px bg-primary/10"></div>
+                <div class="space-y-1 text-right">
+                  <p class="text-xs text-primary uppercase font-bold">XGBoost</p>
+                  <p class="text-3xl font-black text-primary">{{ xgbMetric('mae') }}</p>
+                </div>
               </div>
-              <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                <div class="h-full bg-primary rounded-l-full" :style="`width: ${feat.xgb * 100}%`"></div>
-                <div class="h-full bg-slate-300/60" :style="`width: ${feat.rf * 100}%`"></div>
+              <div class="mt-4 flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-lg w-fit">
+                <span class="material-symbols-outlined text-sm font-bold">verified</span>
+                <span class="text-xs font-bold uppercase">XGBoost {{ maeWinPct }}% better</span>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-primary/10">
+              <h3 class="text-slate-500 font-semibold text-sm mb-4">R² Score <span class="text-xs text-slate-400">(higher is better)</span></h3>
+              <div class="flex items-center justify-between">
+                <div class="space-y-1">
+                  <p class="text-xs text-slate-400 uppercase font-bold">Random Forest</p>
+                  <p class="text-2xl font-bold text-slate-600">{{ rfMetric('r2') }}</p>
+                </div>
+                <div class="h-10 w-px bg-primary/10"></div>
+                <div class="space-y-1 text-right">
+                  <p class="text-xs text-primary uppercase font-bold">XGBoost</p>
+                  <p class="text-3xl font-black text-primary">{{ xgbMetric('r2') }}</p>
+                </div>
+              </div>
+              <div class="mt-4 flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-lg w-fit">
+                <span class="material-symbols-outlined text-sm font-bold">verified</span>
+                <span class="text-xs font-bold uppercase">XGBoost {{ r2WinPct }}% better</span>
               </div>
             </div>
           </div>
-          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-center gap-8">
-            <div class="flex items-center gap-2">
-              <div class="size-3 bg-primary rounded-sm"></div>
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">XGBoost Weight</span>
+
+          <!-- Scatter: Predicted vs Actual (2025 holdout) -->
+          <div class="bg-white rounded-xl p-8 shadow-sm border border-primary/10 mb-10">
+            <div class="flex items-center justify-between mb-8">
+              <div>
+                <h2 class="text-xl font-bold text-slate-900">Predicted vs. Actual TCH (2025 Holdout)</h2>
+                <p class="text-slate-500 text-sm">Each point = one region · Diagonal = perfect prediction</p>
+              </div>
+              <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-slate-300"></span><span class="text-sm font-medium text-slate-600">Random Forest</span></div>
+                <div class="flex items-center gap-2"><span class="size-3 rounded-full bg-primary"></span><span class="text-sm font-medium text-slate-600">XGBoost</span></div>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
-              <div class="size-3 bg-slate-300/60 rounded-sm"></div>
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Random Forest Importance</span>
+            <Scatter :data="scatterData" :options="scatterOptions" class="max-h-96" />
+          </div>
+
+          <!-- Feature Importance -->
+          <div class="bg-white rounded-xl p-8 shadow-sm border border-primary/10 mb-10">
+            <h2 class="text-xl font-bold text-slate-900 mb-2">Feature Importance Comparison</h2>
+            <p class="text-slate-500 text-sm mb-8">Relative contribution of NDVI features and seasonal variables</p>
+            <div class="space-y-5">
+              <div v-for="feat in mergedFeatures" :key="feat.feature" class="space-y-1.5">
+                <div class="flex justify-between text-sm font-bold">
+                  <span class="text-slate-700">{{ feat.feature }}</span>
+                  <span class="text-primary text-xs">XGB: {{ (feat.xgb * 100).toFixed(1) }}% · RF: {{ (feat.rf * 100).toFixed(1) }}%</span>
+                </div>
+                <div class="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                  <div class="h-full bg-primary rounded-l-full" :style="`width: ${feat.xgb * 100}%`"></div>
+                  <div class="h-full bg-slate-300/70" :style="`width: ${feat.rf * 100}%`"></div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+
+          <!-- Model Management -->
+          <div class="bg-white rounded-xl p-8 shadow-sm border border-primary/10">
+            <h2 class="text-xl font-bold text-slate-900 mb-2">Model Management</h2>
+            <p class="text-slate-500 text-sm mb-6">Upload new models or change the active model used for predictions.</p>
+
+            <div class="space-y-4 mb-8">
+              <div
+                v-for="m in models" :key="m._id"
+                class="flex items-center justify-between p-4 rounded-xl border transition-all"
+                :class="m.is_active ? 'border-primary bg-primary/5' : 'border-slate-200'"
+              >
+                <div class="flex items-center gap-4">
+                  <div class="size-10 rounded-lg flex items-center justify-center" :class="m.is_active ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'">
+                    <span class="material-symbols-outlined text-base">{{ m.type === 'XGBoost' ? 'bolt' : 'forest' }}</span>
+                  </div>
+                  <div>
+                    <p class="font-bold text-slate-800">{{ m.type }}</p>
+                    <p class="text-xs text-slate-400">LOSO R²: {{ m.loso_r2.toFixed(4) }} · RMSE: {{ m.loso_rmse.toFixed(4) }}</p>
+                  </div>
+                  <span v-if="m.is_active" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">Active</span>
+                </div>
+                <button
+                  v-if="!m.is_active"
+                  class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors"
+                  @click="activate(m._id)"
+                >Set Active</button>
+              </div>
+            </div>
+
+            <!-- Upload new model -->
+            <div class="border-t border-slate-100 pt-6">
+              <h3 class="font-bold text-slate-700 mb-4 text-sm uppercase tracking-wider">Upload New Model</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Model Type</label>
+                  <select v-model="uploadType" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-primary bg-white outline-none">
+                    <option value="RandomForest">Random Forest</option>
+                    <option value="XGBoost">XGBoost</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Model File (.joblib or .ubj)</label>
+                  <input type="file" accept=".joblib,.ubj" @change="onFileSelect" class="w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white" />
+                </div>
+                <div>
+                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">LOSO R²</label>
+                  <input v-model="uploadMetrics.loso_r2" type="number" step="0.0001" placeholder="e.g. 0.5138" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none" />
+                </div>
+                <div>
+                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">LOSO RMSE</label>
+                  <input v-model="uploadMetrics.loso_rmse" type="number" step="0.0001" placeholder="e.g. 7.5354" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none" />
+                </div>
+                <div>
+                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">LOSO MAE</label>
+                  <input v-model="uploadMetrics.loso_mae" type="number" step="0.0001" placeholder="e.g. 5.9433" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none" />
+                </div>
+              </div>
+              <button
+                class="mt-4 flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                :disabled="uploading || !selectedFile"
+                @click="submitUpload"
+              >
+                <svg v-if="uploading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                </svg>
+                <span class="material-symbols-outlined text-sm" v-else>upload</span>
+                {{ uploading ? 'Uploading…' : 'Upload Model' }}
+              </button>
+            </div>
+          </div>
+        </template>
       </main>
 
       <footer class="mt-auto border-t border-primary/10 py-8 px-10 bg-white">
-        <div class="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div class="flex items-center gap-2 text-primary/60">
-            <span class="material-symbols-outlined text-sm">copyright</span>
-            <span class="text-sm font-medium">2025 Rékolte · Middlesex University Mauritius</span>
-          </div>
-          <p class="text-xs text-slate-400">Metrics are placeholder values pending model training completion.</p>
+        <div class="max-w-[1200px] mx-auto flex justify-between items-center">
+          <p class="text-sm text-primary/60">© 2025 Rékolte · Middlesex University Mauritius</p>
+          <p class="text-xs text-slate-400">Metrics from LOSO cross-validation on 2008–2024 training data.</p>
         </div>
       </footer>
     </div>
@@ -194,52 +217,78 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { IonPage } from '@ionic/vue'
 import { Scatter } from 'vue-chartjs'
-import {
-  Chart as ChartJS, LinearScale, PointElement,
-  LineElement, Tooltip, Legend,
-} from 'chart.js'
-import { modelMetrics } from '@/data/mockData'
+import { Chart as ChartJS, LinearScale, PointElement, LineElement, Tooltip, Legend } from 'chart.js'
+import NavBar from '@/components/NavBar.vue'
+import { getModels, activateModel, uploadModel } from '@/services/api'
+import type { ModelConfig } from '@/services/api'
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend)
 
-const evalSet = ref<'test' | 'train'>('test')
+const loading = ref(true)
+const uploading = ref(false)
+const evalSet = ref<'loso' | 'test'>('loso')
+const models = ref<ModelConfig[]>([])
+const selectedFile = ref<File | null>(null)
+const uploadType = ref('XGBoost')
+const uploadMetrics = ref({ loso_r2: '', loso_rmse: '', loso_mae: '' })
 
-const rfMetrics  = computed(() => modelMetrics.find(m => m.name === 'RandomForest')!)
-const xgbMetrics = computed(() => modelMetrics.find(m => m.name === 'XGBoost')!)
+const rfModel  = computed(() => models.value.find(m => m.type === 'RandomForest'))
+const xgbModel = computed(() => models.value.find(m => m.type === 'XGBoost'))
 
-const rmseWinPct = computed(() =>
-  (((rfMetrics.value.rmse - xgbMetrics.value.rmse) / rfMetrics.value.rmse) * 100).toFixed(1)
-)
-const maeWinPct = computed(() =>
-  (((rfMetrics.value.mae - xgbMetrics.value.mae) / rfMetrics.value.mae) * 100).toFixed(1)
-)
-const r2WinPct = computed(() =>
-  (((xgbMetrics.value.r2 - rfMetrics.value.r2) / rfMetrics.value.r2) * 100).toFixed(1)
-)
+function rfMetric(key: string) {
+  if (!rfModel.value) return '—'
+  const prefix = evalSet.value === 'loso' ? 'loso_' : 'test_'
+  return (rfModel.value as any)[prefix + key]?.toFixed(4) ?? '—'
+}
+function xgbMetric(key: string) {
+  if (!xgbModel.value) return '—'
+  const prefix = evalSet.value === 'loso' ? 'loso_' : 'test_'
+  return (xgbModel.value as any)[prefix + key]?.toFixed(4) ?? '—'
+}
 
-const scatterData = computed(() => ({
-  datasets: [
-    {
-      label: 'Random Forest',
-      data: rfMetrics.value.predictions.map(p => ({ x: p.actual, y: p.predicted })),
-      backgroundColor: 'rgba(100,116,139,0.4)',
-      pointRadius: 6,
-      pointHoverRadius: 8,
-    },
-    {
-      label: 'XGBoost',
-      data: xgbMetrics.value.predictions.map(p => ({ x: p.actual, y: p.predicted })),
-      backgroundColor: 'rgba(45,80,22,0.7)',
-      pointRadius: 7,
-      pointHoverRadius: 9,
-      pointBorderColor: '#ffffff',
-      pointBorderWidth: 1.5,
-    },
-  ],
-}))
+const rmseWinPct = computed(() => {
+  if (!rfModel.value || !xgbModel.value) return '—'
+  const k = evalSet.value === 'loso' ? 'loso_rmse' : 'test_rmse'
+  return (((rfModel.value as any)[k] - (xgbModel.value as any)[k]) / (rfModel.value as any)[k] * 100).toFixed(1)
+})
+const maeWinPct = computed(() => {
+  if (!rfModel.value || !xgbModel.value) return '—'
+  const k = evalSet.value === 'loso' ? 'loso_mae' : 'test_mae'
+  return (((rfModel.value as any)[k] - (xgbModel.value as any)[k]) / (rfModel.value as any)[k] * 100).toFixed(1)
+})
+const r2WinPct = computed(() => {
+  if (!rfModel.value || !xgbModel.value) return '—'
+  const k = evalSet.value === 'loso' ? 'loso_r2' : 'test_r2'
+  return (((xgbModel.value as any)[k] - (rfModel.value as any)[k]) / Math.abs((rfModel.value as any)[k]) * 100).toFixed(1)
+})
+
+const scatterData = computed(() => {
+  const rfPreds = rfModel.value?.holdout_predictions ?? []
+  const xgbPreds = xgbModel.value?.holdout_predictions ?? []
+  return {
+    datasets: [
+      {
+        label: 'Random Forest',
+        data: rfPreds.map(p => ({ x: p.actual_tch, y: p.rf_predicted })),
+        backgroundColor: 'rgba(100,116,139,0.5)',
+        pointRadius: 7,
+        pointHoverRadius: 9,
+      },
+      {
+        label: 'XGBoost',
+        data: xgbPreds.map(p => ({ x: p.actual_tch, y: p.xgb_predicted })),
+        backgroundColor: 'rgba(45,80,22,0.7)',
+        pointRadius: 7,
+        pointHoverRadius: 9,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 1.5,
+      },
+    ],
+  }
+})
 
 const scatterOptions = {
   responsive: true,
@@ -248,30 +297,57 @@ const scatterOptions = {
     legend: { display: false },
     tooltip: {
       backgroundColor: '#2d5016',
-      callbacks: {
-        label: (ctx: any) => ` Actual: ${ctx.parsed.x} → Predicted: ${ctx.parsed.y}`,
-      },
+      callbacks: { label: (ctx: any) => ` Actual: ${ctx.parsed.x} → Predicted: ${ctx.parsed.y}` },
     },
   },
   scales: {
-    x: {
-      title: { display: true, text: 'Actual TCH', font: { family: 'Work Sans', weight: 'bold' as const }, color: '#94a3b8' },
-      grid: { color: 'rgba(0,0,0,0.05)' },
-      ticks: { font: { family: 'Work Sans' }, color: '#94a3b8' },
-    },
-    y: {
-      title: { display: true, text: 'Predicted TCH', font: { family: 'Work Sans', weight: 'bold' as const }, color: '#94a3b8' },
-      grid: { color: 'rgba(0,0,0,0.05)' },
-      ticks: { font: { family: 'Work Sans' }, color: '#94a3b8' },
-    },
+    x: { title: { display: true, text: 'Actual TCH', color: '#94a3b8' }, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#94a3b8' } },
+    y: { title: { display: true, text: 'Predicted TCH', color: '#94a3b8' }, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#94a3b8' } },
   },
 }
 
-const mergedFeatures = computed(() =>
-  xgbMetrics.value.featureImportance.map((xf, i) => ({
+const mergedFeatures = computed(() => {
+  const xgbFI = xgbModel.value?.feature_importance ?? []
+  const rfFI  = rfModel.value?.feature_importance ?? []
+  return xgbFI.map((xf, i) => ({
     feature: xf.feature,
     xgb: xf.importance,
-    rf: rfMetrics.value.featureImportance[i]?.importance ?? 0,
-  }))
-)
+    rf: rfFI[i]?.importance ?? 0,
+  })).sort((a, b) => b.xgb - a.xgb)
+})
+
+onMounted(async () => {
+  models.value = await getModels()
+  loading.value = false
+})
+
+async function activate(id: string) {
+  await activateModel(id)
+  models.value = await getModels()
+}
+
+function onFileSelect(e: Event) {
+  selectedFile.value = (e.target as HTMLInputElement).files?.[0] ?? null
+}
+
+async function submitUpload() {
+  if (!selectedFile.value) return
+  uploading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', selectedFile.value)
+    fd.append('type', uploadType.value)
+    fd.append('loso_r2', String(uploadMetrics.value.loso_r2))
+    fd.append('loso_rmse', String(uploadMetrics.value.loso_rmse))
+    fd.append('loso_mae', String(uploadMetrics.value.loso_mae))
+    await uploadModel(fd)
+    models.value = await getModels()
+    selectedFile.value = null
+    uploadMetrics.value = { loso_r2: '', loso_rmse: '', loso_mae: '' }
+  } catch (e: any) {
+    alert('Upload failed: ' + e.message)
+  } finally {
+    uploading.value = false
+  }
+}
 </script>
