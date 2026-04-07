@@ -54,4 +54,12 @@ def google_login():
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
-    return jsonify({"token": token, "role": role, "name": google_data.get("name", "")})
+    return jsonify({
+        "token": token,
+        "user": {
+            "email": email,
+            "name": google_data.get("name", ""),
+            "picture": google_data.get("picture", ""),
+            "role": role,
+        }
+    })
