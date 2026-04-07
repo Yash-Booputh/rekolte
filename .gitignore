@@ -15,6 +15,15 @@ venv/
 .env.local
 .env.*.local
 
+# ── Google service account key ────────────────────────────────────────────────
+*.json
+!sugarcane-yield-app/package.json
+!sugarcane-yield-app/tsconfig*.json
+!sugarcane-yield-app/ionic.config.json
+!sugarcane-yield-app/cypress.config.ts
+!model/Mapping/*.geojson
+!sugarcane-yield-app/public/*.geojson
+
 # ── Dev/test helpers (not needed in production) ───────────────────────────────
 rekolte-api/test_token.py
 rekolte-api/inspect_models.py
