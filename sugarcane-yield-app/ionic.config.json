@@ -1,0 +1,7 @@
+{
+  "name": "sugarcane-yield-app",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}

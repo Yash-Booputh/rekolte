@@ -1,0 +1,51 @@
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ionic CSS variable overrides to match Rékolte design system */
+:root {
+  --ion-color-primary: #2d5016;
+  --ion-color-primary-rgb: 45, 80, 22;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-shade: #274614;
+  --ion-color-primary-tint: #42622d;
+
+  --ion-color-secondary: #C8891A;
+  --ion-color-secondary-rgb: 200, 137, 26;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-shade: #b07917;
+  --ion-color-secondary-tint: #ce9531;
+
+  --ion-background-color: #F5F0E8;
+  --ion-background-color-rgb: 245, 240, 232;
+
+  --ion-text-color: #0f172a;
+  --ion-text-color-rgb: 15, 23, 42;
+
+  --ion-font-family: 'Work Sans', sans-serif;
+
+  --ion-toolbar-background: #2d5016;
+  --ion-toolbar-color: #ffffff;
+
+  --ion-tab-bar-background: #2d5016;
+  --ion-tab-bar-color: rgba(255, 255, 255, 0.6);
+  --ion-tab-bar-color-selected: #C8891A;
+}
+
+/* Global body styles */
+body {
+  font-family: 'Work Sans', sans-serif;
+  background-color: #F5F0E8;
+}
+
+/* Leaf pattern utility */
+.leaf-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0c15 0 30 15 30 30S45 60 30 60 0 45 0 30 15 0 30 0z' fill='%232d5016' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #2d5016; }
