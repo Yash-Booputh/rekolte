@@ -20,7 +20,7 @@
     <!-- Right side -->
     <div class="flex items-center gap-4">
       <!-- Notification bell -->
-      <div class="relative">
+      <div class="relative" v-click-outside="() => notifOpen = false">
         <button
           class="p-2 hover:bg-white/10 rounded-full transition-colors relative"
           @click="notifOpen = !notifOpen"
@@ -35,7 +35,6 @@
         <!-- Notification dropdown -->
         <div
           v-if="notifOpen"
-          v-click-outside="() => notifOpen = false"
           class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-[9999]"
         >
           <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
@@ -72,7 +71,7 @@
       <div class="h-8 w-px bg-white/20 mx-1"></div>
 
       <!-- User avatar + dropdown -->
-      <div class="relative">
+      <div class="relative" v-click-outside="() => userOpen = false">
         <button
           class="flex items-center gap-3 cursor-pointer hover:bg-white/10 rounded-lg px-2 py-1 transition-colors"
           @click="userOpen = !userOpen"
@@ -91,7 +90,6 @@
         <!-- User dropdown -->
         <div
           v-if="userOpen"
-          v-click-outside="() => userOpen = false"
           class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-[9999]"
         >
           <div class="px-4 py-3 border-b border-slate-100">
@@ -198,7 +196,7 @@ function openSettings() {
 
 function handleLogout() {
   logout()
-  router.push('/login')
+  window.location.replace('/login')
 }
 
 function notifIcon(type: string) {

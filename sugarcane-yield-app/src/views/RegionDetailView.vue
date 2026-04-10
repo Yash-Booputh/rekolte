@@ -1,9 +1,9 @@
 <template>
   <ion-page>
-    <div class="min-h-screen bg-parchment text-slate-900 font-sans flex flex-col">
+    <div class="h-full overflow-y-auto bg-parchment text-slate-900 font-sans flex flex-col">
       <NavBar />
 
-      <main class="max-w-7xl mx-auto px-6 py-8 w-full">
+      <main class="px-6 py-8 w-full">
         <!-- Header -->
         <div class="mb-8">
           <nav class="flex items-center gap-2 text-sm text-primary/60 mb-4 font-medium">

@@ -83,7 +83,7 @@ export const getBulletins = (params?: { season?: number; type?: string }) =>
   request<BulletinDoc[]>('GET', `/bulletins${toQuery(params)}`)
 
 export const uploadBulletin = (formData: FormData) =>
-  request<{ id: string; driveFileId: string }>('POST', '/bulletins/upload', formData, true)
+  request<{ id: string }>('POST', '/bulletins/upload', formData, true)
 
 export const deleteBulletin = (id: string) =>
   request<{ message: string }>('DELETE', `/bulletins/${id}`)
@@ -192,7 +192,7 @@ export interface ModelConfig {
 export interface BulletinDoc {
   _id: string
   filename: string
-  driveFileId: string
+  cloudinaryUrl: string
   type: 'weekly' | 'crop_report' | 'other'
   season: number | null
   week: number | null
