@@ -41,32 +41,40 @@ def seed_harvest():
         count += 1
     print(f"Seeded {count} harvest records.")
 
-MONTHLY_COLS = ["ndvi_june", "ndvi_july", "ndvi_aug", "ndvi_sep", "ndvi_oct", "ndvi_nov", "ndvi_dec"]
+NDVI_MONTHLY   = ["ndvi_june", "ndvi_july", "ndvi_aug", "ndvi_sep", "ndvi_oct", "ndvi_nov", "ndvi_dec"]
+RAIN_MONTHLY   = ["rainfall_june", "rainfall_july", "rainfall_aug", "rainfall_sep", "rainfall_oct", "rainfall_nov", "rainfall_dec"]
+TEMP_MONTHLY   = ["temp_june", "temp_july", "temp_aug", "temp_sep", "temp_oct", "temp_nov", "temp_dec"]
 
 def seed_satellite():
     path = os.path.join(CSV_DIR, "satellite_features.csv")
     df = pd.read_csv(path)
 
-    # Impute missing monthly NDVI with row's ndvi_mean (same as training notebook)
-    for col in MONTHLY_COLS:
+    # Impute missing monthly NDVI with row ndvi_mean (matches training notebook)
+    for col in NDVI_MONTHLY:
         if col in df.columns:
             df[col] = df[col].fillna(df["ndvi_mean"])
 
     count = 0
     for _, row in df.iterrows():
-        monthly = {}
-        for col in MONTHLY_COLS:
-            monthly[col] = float(row[col]) if col in df.columns and pd.notna(row.get(col)) else None
+        ndvi_monthly = {col: float(row[col]) if col in df.columns and pd.notna(row.get(col)) else None
+                        for col in NDVI_MONTHLY}
+        rain_monthly = {col: float(row[col]) if col in df.columns and pd.notna(row.get(col)) else None
+                        for col in RAIN_MONTHLY}
+        temp_monthly = {col: float(row[col]) if col in df.columns and pd.notna(row.get(col)) else None
+                        for col in TEMP_MONTHLY}
 
         doc = {
-            "season": int(row["season"]),
-            "region": str(row["region"]).upper(),
-            "satellite_source": str(row.get("satellite", "")),
+            "season":            int(row["season"]),
+            "region":            str(row["region"]).upper(),
+            "satellite":         str(row.get("satellite", "")),   # landsat7 / landsat8 / sentinel2
+            "satellite_source":  str(row.get("satellite", "")),   # kept for backwards compat
             "observation_count": int(row["observation_count"]) if pd.notna(row.get("observation_count")) else 0,
-            "ndvi_mean": float(row["ndvi_mean"]) if pd.notna(row.get("ndvi_mean")) else None,
-            "ndvi_max": float(row["ndvi_max"]) if pd.notna(row.get("ndvi_max")) else None,
-            "ndvi_cumulative": float(row["ndvi_cumulative"]) if pd.notna(row.get("ndvi_cumulative")) else None,
-            **monthly,
+            "ndvi_mean":         float(row["ndvi_mean"])         if pd.notna(row.get("ndvi_mean"))        else None,
+            "ndvi_max":          float(row["ndvi_max"])          if pd.notna(row.get("ndvi_max"))         else None,
+            "ndvi_cumulative":   float(row["ndvi_cumulative"])   if pd.notna(row.get("ndvi_cumulative"))  else None,
+            **ndvi_monthly,
+            **rain_monthly,
+            **temp_monthly,
         }
         db.satellite_features.update_one(
             {"season": doc["season"], "region": doc["region"]},
@@ -74,7 +82,7 @@ def seed_satellite():
             upsert=True,
         )
         count += 1
-    print(f"Seeded {count} satellite feature records.")
+    print(f"Seeded {count} satellite feature records (NDVI + rainfall + temperature).")
 
 if __name__ == "__main__":
     print("Seeding harvest data...")

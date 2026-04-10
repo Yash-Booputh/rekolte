@@ -2,6 +2,7 @@ import os
 import datetime
 import joblib
 import numpy as np
+import xgboost as xgb
 from flask import Blueprint, request, jsonify
 from db import get_db
 from middleware.auth import require_auth
@@ -9,30 +10,87 @@ from config import MODELS_DIR
 
 predict_bp = Blueprint("predict", __name__)
 
-REGIONS = ["NORD", "SUD", "EST", "OUEST", "CENTRE"]
-MONTHLY_COLS = ["ndvi_june", "ndvi_july", "ndvi_aug", "ndvi_sep", "ndvi_oct", "ndvi_nov", "ndvi_dec"]
+REGIONS      = ["NORD", "SUD", "EST", "OUEST", "CENTRE"]
+MONTH_SUFFIX = ["june", "july", "aug", "sep", "oct", "nov", "dec"]
 
-# Feature order must match training notebook exactly (15 features):
-# ndvi_june..ndvi_dec, ndvi_mean, ndvi_max, ndvi_cumulative,
-# region_EST, region_NORD, region_OUEST, region_SUD, season
-# CENTRE is the baseline (drop_first=True dropped region_CENTRE)
-def _build_feature_vector(ndvi_doc, region, season_year):
-    monthly = [ndvi_doc.get(col) or ndvi_doc["ndvi_mean"] for col in MONTHLY_COLS]
-    aggregates = [ndvi_doc["ndvi_mean"], ndvi_doc["ndvi_max"], ndvi_doc["ndvi_cumulative"]]
+# ── Feature order must match 02_model_training_final.ipynb exactly (31 features) ──
+# 1.  ndvi_june..ndvi_dec          (7)   monthly NDVI
+# 2.  ndvi_mean, ndvi_max,         (3)   season NDVI aggregates
+#     ndvi_cumulative
+# 3.  region_EST, region_NORD,     (4)   one-hot region (CENTRE = baseline)
+#     region_OUEST, region_SUD
+# 4.  satellite_landsat8,          (2)   one-hot sensor (landsat7 = baseline)
+#     satellite_sentinel2
+# 5.  rainfall_june..rainfall_dec  (7)   CHIRPS monthly rainfall (mm)
+# 6.  temp_june..temp_dec          (7)   ERA5 monthly temperature (°C)
+# 7.  surface_prev                 (1)   previous season harvested area (ha)
+
+
+def _build_feature_vector(ndvi_doc, region, surface_prev):
+    """Build the 31-element feature vector matching training feature order."""
+    # Monthly NDVI — fall back to ndvi_mean if a month is missing
+    ndvi_monthly = [
+        ndvi_doc.get(f"ndvi_{m}") or ndvi_doc["ndvi_mean"]
+        for m in MONTH_SUFFIX
+    ]
+    ndvi_agg = [ndvi_doc["ndvi_mean"], ndvi_doc["ndvi_max"], ndvi_doc["ndvi_cumulative"]]
+
+    # Region one-hot (alphabetical: EST, NORD, OUEST, SUD — CENTRE baseline)
     region_dummies = [
         1 if region == "EST"   else 0,
         1 if region == "NORD"  else 0,
         1 if region == "OUEST" else 0,
         1 if region == "SUD"   else 0,
     ]
-    return np.array([monthly + aggregates + region_dummies + [season_year]], dtype=float)
+
+    # Satellite one-hot (alphabetical: landsat8, sentinel2 — landsat7 baseline)
+    satellite = ndvi_doc.get("satellite") or ndvi_doc.get("satellite_source", "sentinel2")
+    sat_dummies = [
+        1 if satellite == "landsat8"  else 0,
+        1 if satellite == "sentinel2" else 0,
+    ]
+
+    # Monthly rainfall — fall back to 0 if missing (CHIRPS complete for 2008-2025)
+    rain_monthly = [
+        float(ndvi_doc.get(f"rainfall_{m}") or 0.0)
+        for m in MONTH_SUFFIX
+    ]
+
+    # Monthly temperature — fall back to 25°C if missing (ERA5 complete for 2008-2025)
+    temp_monthly = [
+        float(ndvi_doc.get(f"temp_{m}") or 25.0)
+        for m in MONTH_SUFFIX
+    ]
+
+    features = (
+        ndvi_monthly        # 7
+        + ndvi_agg          # 3
+        + region_dummies    # 4
+        + sat_dummies       # 2
+        + rain_monthly      # 7
+        + temp_monthly      # 7
+        + [surface_prev]    # 1
+    )                       # = 31
+    return np.array([features], dtype=float)
+
 
 _model_cache = {}
 
 def _load_model(filepath):
     if filepath not in _model_cache:
-        _model_cache[filepath] = joblib.load(filepath)
+        if filepath.endswith(".ubj"):
+            booster = xgb.Booster()
+            booster.load_model(filepath)
+            _model_cache[filepath] = booster
+        else:
+            _model_cache[filepath] = joblib.load(filepath)
     return _model_cache[filepath]
+
+def _predict(model, X):
+    """Unified predict — handles both sklearn models and raw XGBoost Booster."""
+    if isinstance(model, xgb.Booster):
+        return model.predict(xgb.DMatrix(X))
+    return model.predict(X)
 
 def _get_active_model():
     db = get_db()
@@ -44,11 +102,29 @@ def _get_active_model():
         return None, None
     return _load_model(filepath), config
 
+def _get_surface_prev(db, region, season_year):
+    """Previous season's harvested area — captures the survivor effect.
+    Falls back to current season area, then a global default."""
+    doc = db.harvest_data.find_one(
+        {"region": region, "season": season_year - 1},
+        {"surface_harvested": 1}
+    )
+    if doc and doc.get("surface_harvested"):
+        return float(doc["surface_harvested"])
+    # Fallback: use current season's own area (e.g. first season in DB)
+    doc_curr = db.harvest_data.find_one(
+        {"region": region, "season": season_year},
+        {"surface_harvested": 1}
+    )
+    if doc_curr and doc_curr.get("surface_harvested"):
+        return float(doc_curr["surface_harvested"])
+    return 5000.0  # conservative global default
+
+
 @predict_bp.route("/ndvi/latest", methods=["GET"])
 @require_auth
 def get_latest_ndvi():
     db = get_db()
-    current_season = datetime.datetime.utcnow().year
     results = {}
     for region in REGIONS:
         doc = db.satellite_features.find_one(
@@ -57,15 +133,17 @@ def get_latest_ndvi():
         )
         if doc:
             results[region] = {
-                "region": region,
-                "season": doc["season"],
-                "ndvi_mean": doc["ndvi_mean"],
-                "ndvi_max": doc["ndvi_max"],
-                "ndvi_cumulative": doc["ndvi_cumulative"],
+                "region":            region,
+                "season":            doc["season"],
+                "satellite":         doc.get("satellite") or doc.get("satellite_source"),
+                "ndvi_mean":         doc["ndvi_mean"],
+                "ndvi_max":          doc["ndvi_max"],
+                "ndvi_cumulative":   doc["ndvi_cumulative"],
                 "observation_count": doc.get("observation_count", 0),
-                "extracted_at": doc.get("extracted_at", "").isoformat() if hasattr(doc.get("extracted_at", ""), "isoformat") else str(doc.get("extracted_at", "")),
+                "extracted_at":      str(doc.get("extracted_at", "")),
             }
     return jsonify(results)
+
 
 @predict_bp.route("/predict", methods=["POST"])
 @require_auth
@@ -78,7 +156,7 @@ def predict():
 
     db = get_db()
 
-    # Get latest NDVI for the region
+    # Latest NDVI + climate row for this region
     ndvi_doc = db.satellite_features.find_one(
         {"region": region},
         sort=[("season", -1)]
@@ -90,10 +168,11 @@ def predict():
     if not model:
         return jsonify({"error": "No active model available"}), 503
 
-    season_year = ndvi_doc["season"]
-    features = _build_feature_vector(ndvi_doc, region, season_year)
+    season_year  = ndvi_doc["season"]
+    surface_prev = _get_surface_prev(db, region, season_year)
 
-    predicted_tch = float(model.predict(features)[0])
+    features      = _build_feature_vector(ndvi_doc, region, surface_prev)
+    predicted_tch = float(_predict(model, features)[0])
 
     # Check if we have actual TCH for comparison
     harvest_doc = db.harvest_data.find_one(
@@ -103,17 +182,18 @@ def predict():
     actual_tch = harvest_doc.get("tch") if harvest_doc else None
 
     prediction_record = {
-        "region": region,
-        "season": season_year,
+        "region":        region,
+        "season":        season_year,
         "predicted_tch": round(predicted_tch, 2),
-        "actual_tch": actual_tch,
-        "model_used": config["type"],
-        "model_id": str(config["_id"]),
+        "actual_tch":    actual_tch,
+        "model_used":    config["type"],
+        "model_id":      str(config["_id"]),
         "ndvi_snapshot": {
-            "ndvi_mean": ndvi_doc["ndvi_mean"],
-            "ndvi_max": ndvi_doc["ndvi_max"],
-            "ndvi_cumulative": ndvi_doc["ndvi_cumulative"],
-            "extracted_at": ndvi_doc.get("extracted_at"),
+            "ndvi_mean":         ndvi_doc["ndvi_mean"],
+            "ndvi_max":          ndvi_doc["ndvi_max"],
+            "ndvi_cumulative":   ndvi_doc["ndvi_cumulative"],
+            "observation_count": ndvi_doc.get("observation_count", 0),
+            "extracted_at":      ndvi_doc.get("extracted_at"),
         },
         "created_by": request.user["email"],
         "created_at": datetime.datetime.utcnow(),
@@ -129,9 +209,12 @@ def predict():
     prediction_record.pop("_id", None)
     prediction_record["created_at"] = prediction_record["created_at"].isoformat()
     if prediction_record["ndvi_snapshot"].get("extracted_at"):
-        prediction_record["ndvi_snapshot"]["extracted_at"] = str(prediction_record["ndvi_snapshot"]["extracted_at"])
+        prediction_record["ndvi_snapshot"]["extracted_at"] = str(
+            prediction_record["ndvi_snapshot"]["extracted_at"]
+        )
 
     return jsonify(prediction_record)
+
 
 @predict_bp.route("/predictions", methods=["GET"])
 @require_auth
