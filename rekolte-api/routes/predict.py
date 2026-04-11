@@ -1,4 +1,5 @@
 import os
+import json as _json
 import datetime
 import joblib
 import numpy as np
@@ -77,14 +78,33 @@ def _build_feature_vector(ndvi_doc, region, surface_prev):
 
 _model_cache = {}
 
+def _sync_xgb_base_score(model):
+    """
+    XGBoost's pickle/joblib stores the Python attribute base_score correctly,
+    but the underlying C++ booster raw bytes lose it across versions.
+    Re-apply the Python attribute value to the booster config after loading.
+    """
+    bs = getattr(model, 'base_score', None)
+    if bs is None or bs == 0.5:
+        return
+    booster = model.get_booster()
+    cfg = _json.loads(booster.save_config())
+    current = float(cfg['learner']['learner_model_param']['base_score'])
+    if abs(current - float(bs)) > 0.01:
+        cfg['learner']['learner_model_param']['base_score'] = str(float(bs))
+        booster.load_config(_json.dumps(cfg))
+        print(f"[INFO] Synced XGBoost base_score from Python attr ({bs}) to booster (was {current:.4f})", flush=True)
+
 def _load_model(filepath):
     if filepath not in _model_cache:
         if filepath.endswith(".ubj"):
             model = XGBRegressor()
             model.load_model(filepath)
-            _model_cache[filepath] = model
         else:
-            _model_cache[filepath] = joblib.load(filepath)
+            model = joblib.load(filepath)
+        if isinstance(model, XGBRegressor):
+            _sync_xgb_base_score(model)
+        _model_cache[filepath] = model
     return _model_cache[filepath]
 
 def _predict(model, X):
