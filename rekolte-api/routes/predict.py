@@ -112,10 +112,8 @@ def _get_active_model():
     db = get_db()
     config = db.model_config.find_one({"is_active": True})
     if not config:
-        print("[DEBUG] No active model found in DB", flush=True)
         return None, None
     filepath = os.path.join(MODELS_DIR, config["filepath"])
-    print(f"[DEBUG] Active model: type={config['type']} filepath={config['filepath']} abs={filepath} exists={os.path.exists(filepath)}", flush=True)
     if not os.path.exists(filepath):
         return None, None
     return _load_model(filepath), config
@@ -190,13 +188,7 @@ def predict():
     surface_prev = _get_surface_prev(db, region, season_year)
 
     features      = _build_feature_vector(ndvi_doc, region, surface_prev)
-    raw_pred      = _predict(model, features)
-    predicted_tch = float(raw_pred[0])
-
-    print(f"[DEBUG] region={region} model_type={type(model).__name__} "
-          f"filepath={config['filepath']} ndvi_mean={ndvi_doc.get('ndvi_mean'):.4f} "
-          f"surface_prev={surface_prev:.1f} satellite={ndvi_doc.get('satellite') or ndvi_doc.get('satellite_source')} "
-          f"raw_pred={raw_pred[0]:.4f}", flush=True)
+    predicted_tch = float(_predict(model, features)[0])
 
     # Check if we have actual TCH for comparison
     harvest_doc = db.harvest_data.find_one(
