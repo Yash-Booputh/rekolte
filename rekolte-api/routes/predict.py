@@ -3,6 +3,7 @@ import datetime
 import joblib
 import numpy as np
 import xgboost as xgb
+from xgboost import XGBRegressor
 from flask import Blueprint, request, jsonify
 from db import get_db
 from middleware.auth import require_auth
@@ -79,17 +80,18 @@ _model_cache = {}
 def _load_model(filepath):
     if filepath not in _model_cache:
         if filepath.endswith(".ubj"):
-            booster = xgb.Booster()
-            booster.load_model(filepath)
-            _model_cache[filepath] = booster
+            # Must use XGBRegressor.load_model — NOT xgb.Booster().load_model.
+            # XGBoost >= 1.6 auto-estimates base_score during training; Booster
+            # loader silently resets it to 0.5, shifting every prediction by ~74.
+            model = XGBRegressor()
+            model.load_model(filepath)
+            _model_cache[filepath] = model
         else:
             _model_cache[filepath] = joblib.load(filepath)
     return _model_cache[filepath]
 
 def _predict(model, X):
-    """Unified predict — handles both sklearn models and raw XGBoost Booster."""
-    if isinstance(model, xgb.Booster):
-        return model.predict(xgb.DMatrix(X))
+    """Unified predict — handles both sklearn and XGBRegressor models."""
     return model.predict(X)
 
 def _get_active_model():
