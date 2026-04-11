@@ -78,23 +78,6 @@ def _build_feature_vector(ndvi_doc, region, surface_prev):
 
 _model_cache = {}
 
-def _sync_xgb_base_score(model):
-    """
-    XGBoost's pickle/joblib stores the Python attribute base_score correctly,
-    but the underlying C++ booster raw bytes lose it across versions.
-    Re-apply the Python attribute value to the booster config after loading.
-    """
-    bs = getattr(model, 'base_score', None)
-    if bs is None or bs == 0.5:
-        return
-    booster = model.get_booster()
-    cfg = _json.loads(booster.save_config())
-    current = float(cfg['learner']['learner_model_param']['base_score'])
-    if abs(current - float(bs)) > 0.01:
-        cfg['learner']['learner_model_param']['base_score'] = str(float(bs))
-        booster.load_config(_json.dumps(cfg))
-        print(f"[INFO] Synced XGBoost base_score from Python attr ({bs}) to booster (was {current:.4f})", flush=True)
-
 def _load_model(filepath):
     if filepath not in _model_cache:
         if filepath.endswith(".ubj"):
@@ -102,13 +85,27 @@ def _load_model(filepath):
             model.load_model(filepath)
         else:
             model = joblib.load(filepath)
-        if isinstance(model, XGBRegressor):
-            _sync_xgb_base_score(model)
         _model_cache[filepath] = model
     return _model_cache[filepath]
 
 def _predict(model, X):
-    """Unified predict — handles both sklearn and XGBRegressor models."""
+    """
+    Unified predict. For XGBRegressor, applies a base_score correction.
+
+    XGBoost 2.x serialisation (joblib or save_model) loses the auto-estimated
+    base_score from the booster's internal init-prediction, resetting it to 0.5.
+    The Python wrapper attribute (model.base_score) IS correctly preserved by
+    joblib. We compute the correction from those two values — no hardcoding.
+    """
+    if isinstance(model, XGBRegressor):
+        py_bs = float(getattr(model, 'base_score', 0.5) or 0.5)
+        cfg = _json.loads(model.get_booster().save_config())
+        booster_bs = float(cfg['learner']['learner_model_param']['base_score'])
+        correction = py_bs - booster_bs
+        raw = model.get_booster().predict(xgb.DMatrix(X))
+        if abs(correction) > 0.1:
+            print(f"[INFO] XGBoost base_score correction: {booster_bs:.4f} -> {py_bs:.6f} (+{correction:.4f})", flush=True)
+        return raw + correction
     return model.predict(X)
 
 def _get_active_model():
