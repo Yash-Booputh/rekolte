@@ -80,9 +80,6 @@ _model_cache = {}
 def _load_model(filepath):
     if filepath not in _model_cache:
         if filepath.endswith(".ubj"):
-            # Must use XGBRegressor.load_model — NOT xgb.Booster().load_model.
-            # XGBoost >= 1.6 auto-estimates base_score during training; Booster
-            # loader silently resets it to 0.5, shifting every prediction by ~74.
             model = XGBRegressor()
             model.load_model(filepath)
             _model_cache[filepath] = model
