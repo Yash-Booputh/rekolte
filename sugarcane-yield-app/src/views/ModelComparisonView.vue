@@ -132,6 +132,37 @@
             </div>
           </div>
 
+          <!-- Manage Models -->
+          <div class="bg-white rounded-xl p-8 shadow-sm border border-primary/10 mb-10">
+            <h2 class="text-xl font-bold text-slate-900 mb-2">Manage Models</h2>
+            <p class="text-slate-500 text-sm mb-6">Activate or remove uploaded models. The active model cannot be deleted.</p>
+            <div class="space-y-4">
+              <div v-for="m in models" :key="m._id" class="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-800">{{ m.type }}</span>
+                    <span v-if="m.is_active" class="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-bold">Active</span>
+                  </div>
+                  <p class="text-xs text-slate-400">LOSO R²: {{ m.loso_r2?.toFixed(4) ?? '—' }} · Uploaded: {{ m.uploaded_at ? new Date(m.uploaded_at).toLocaleDateString() : '—' }}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    v-if="!m.is_active"
+                    @click="handleActivate(m._id)"
+                    class="px-4 py-2 text-xs font-bold rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors"
+                  >Activate</button>
+                  <button
+                    v-if="!m.is_active"
+                    @click="handleDelete(m._id)"
+                    class="px-4 py-2 text-xs font-bold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+                  >Delete</button>
+                  <span v-if="m.is_active" class="text-xs text-slate-400 italic">In use</span>
+                </div>
+              </div>
+              <p v-if="models.length === 0" class="text-slate-400 text-sm">No models uploaded yet.</p>
+            </div>
+          </div>
+
         </template>
       </main>
 
@@ -147,7 +178,7 @@ import { Scatter } from 'vue-chartjs'
 import { Chart as ChartJS, LinearScale, PointElement, LineElement, Tooltip, Legend } from 'chart.js'
 import NavBar from '@/components/NavBar.vue'
 import FooterBar from '@/components/FooterBar.vue'
-import { getModels } from '@/services/api'
+import { getModels, deleteModel, activateModel } from '@/services/api'
 import type { ModelConfig } from '@/services/api'
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend)
@@ -258,6 +289,17 @@ const mergedFeatures = computed(() => {
     rf: rfFI[i]?.importance ?? 0,
   })).sort((a, b) => b.xgb - a.xgb)
 })
+
+async function handleDelete(id: string) {
+  if (!confirm('Delete this model?')) return
+  await deleteModel(id)
+  models.value = await getModels()
+}
+
+async function handleActivate(id: string) {
+  await activateModel(id)
+  models.value = await getModels()
+}
 
 onMounted(async () => {
   models.value = await getModels()
