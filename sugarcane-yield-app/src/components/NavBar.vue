@@ -1,12 +1,10 @@
 <template>
   <header class="flex items-center justify-between bg-primary text-white px-8 py-4 shadow-lg sticky top-0 z-50">
     <!-- Logo -->
-    <div class="flex items-center gap-3">
-      <div class="bg-accent p-1.5 rounded-lg">
-        <span class="material-symbols-outlined text-white text-2xl">agriculture</span>
-      </div>
+    <router-link to="/dashboard" class="flex items-center gap-3 hover:opacity-90 transition-opacity">
+      <img src="/logo.png" alt="Rékolte" class="h-14 w-14 rounded-xl object-cover" />
       <h1 class="text-2xl font-black tracking-tight uppercase">Rékolte</h1>
-    </div>
+    </router-link>
 
     <!-- Nav links -->
     <nav class="hidden md:flex items-center gap-10">
@@ -99,6 +97,13 @@
           <div class="py-1">
             <button
               class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              @click="openUploadModel"
+            >
+              <span class="material-symbols-outlined text-base text-slate-400">upload</span>
+              Upload New Model
+            </button>
+            <button
+              class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
               @click="openSettings"
             >
               <span class="material-symbols-outlined text-base text-slate-400">settings</span>
@@ -116,6 +121,60 @@
       </div>
     </div>
   </header>
+
+  <!-- Upload New Model modal -->
+  <div v-if="uploadModelOpen" class="fixed inset-0 bg-black/40 z-[10000] flex items-center justify-center px-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="bg-primary px-6 py-4 flex items-center justify-between">
+        <h3 class="text-white font-bold">Upload New Model</h3>
+        <button @click="uploadModelOpen = false" class="text-white/70 hover:text-white">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Model Type</label>
+            <select v-model="uploadType" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-primary bg-white outline-none focus:ring-2 focus:ring-primary/20">
+              <option value="RandomForest">Random Forest</option>
+              <option value="XGBoost">XGBoost</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">LOSO R²</label>
+            <input v-model="uploadMetrics.loso_r2" type="number" step="0.0001" placeholder="e.g. 0.5484" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">LOSO RMSE</label>
+            <input v-model="uploadMetrics.loso_rmse" type="number" step="0.0001" placeholder="e.g. 7.2863" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">LOSO MAE</label>
+            <input v-model="uploadMetrics.loso_mae" type="number" step="0.0001" placeholder="e.g. 5.9433" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Model File (.joblib or .ubj)</label>
+          <input type="file" accept=".joblib,.ubj" @change="onFileSelect" class="w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white cursor-pointer" />
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button @click="uploadModelOpen = false" class="px-5 py-2 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
+          <button
+            class="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            :disabled="uploading || !selectedFile"
+            @click="submitUpload"
+          >
+            <svg v-if="uploading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+            </svg>
+            <span class="material-symbols-outlined text-sm" v-else>upload</span>
+            {{ uploading ? 'Uploading…' : 'Upload Model' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Settings modal -->
   <div v-if="settingsOpen" class="fixed inset-0 bg-black/40 z-[10000] flex items-center justify-center px-4">
@@ -150,7 +209,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
-import { getNotifications, markNotificationRead, markAllNotificationsRead } from '@/services/api'
+import { getNotifications, markNotificationRead, markAllNotificationsRead, uploadModel } from '@/services/api'
 import type { Notification } from '@/services/api'
 
 const router = useRouter()
@@ -159,6 +218,11 @@ const { user, logout } = useAuth()
 const notifOpen = ref(false)
 const userOpen = ref(false)
 const settingsOpen = ref(false)
+const uploadModelOpen = ref(false)
+const uploading = ref(false)
+const selectedFile = ref<File | null>(null)
+const uploadType = ref('XGBoost')
+const uploadMetrics = ref({ loso_r2: '', loso_rmse: '', loso_mae: '' })
 const notifications = ref<Notification[]>([])
 
 const links = [
@@ -194,6 +258,36 @@ function openSettings() {
   settingsOpen.value = true
 }
 
+function openUploadModel() {
+  userOpen.value = false
+  uploadModelOpen.value = true
+}
+
+function onFileSelect(e: Event) {
+  selectedFile.value = (e.target as HTMLInputElement).files?.[0] ?? null
+}
+
+async function submitUpload() {
+  if (!selectedFile.value) return
+  uploading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', selectedFile.value)
+    fd.append('type', uploadType.value)
+    fd.append('loso_r2', String(uploadMetrics.value.loso_r2))
+    fd.append('loso_rmse', String(uploadMetrics.value.loso_rmse))
+    fd.append('loso_mae', String(uploadMetrics.value.loso_mae))
+    await uploadModel(fd)
+    uploadModelOpen.value = false
+    selectedFile.value = null
+    uploadMetrics.value = { loso_r2: '', loso_rmse: '', loso_mae: '' }
+  } catch (e: any) {
+    alert('Upload failed: ' + e.message)
+  } finally {
+    uploading.value = false
+  }
+}
+
 function handleLogout() {
   logout()
   window.location.replace('/login')
@@ -222,13 +316,13 @@ function timeAgo(iso: string) {
 // v-click-outside directive
 const vClickOutside = {
   mounted(el: HTMLElement, binding: any) {
-    el._clickOutside = (e: Event) => {
+    ;(el as any)._clickOutside = (e: Event) => {
       if (!el.contains(e.target as Node)) binding.value(e)
     }
-    document.addEventListener('mousedown', el._clickOutside)
+    document.addEventListener('mousedown', (el as any)._clickOutside)
   },
   unmounted(el: HTMLElement) {
-    document.removeEventListener('mousedown', el._clickOutside)
+    document.removeEventListener('mousedown', (el as any)._clickOutside)
   },
 }
 </script>

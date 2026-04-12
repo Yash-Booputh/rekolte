@@ -1,13 +1,24 @@
 <template>
-  <div class="min-h-screen bg-parchment flex items-center justify-center px-4">
-    <div class="w-full max-w-md">
-      <!-- Logo card -->
-      <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+  <ion-page>
+  <div class="min-h-screen relative overflow-hidden flex items-center justify-center px-4">
+
+    <!-- ── Sugarcane field photo background ─────────────────────────────── -->
+    <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" style="background-image: url('/login.jpg')"></div>
+    <!-- Dark overlay for readability -->
+    <div class="absolute inset-0 bg-black/55"></div>
+    <!-- Subtle green tint to tie into brand -->
+    <div class="absolute inset-0 bg-gradient-to-br from-[#0a1f05]/40 via-transparent to-[#0d2a07]/50"></div>
+    <!-- Ground fog strip at bottom -->
+    <div class="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+
+    <!-- ── Login card ───────────────────────────────────────────────────── -->
+    <div class="relative z-10 w-full max-w-md">
+      <div class="bg-white rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
+
         <!-- Header band -->
-        <div class="bg-primary px-8 py-10 text-center">
-          <div class="inline-flex items-center justify-center bg-accent/20 rounded-2xl p-4 mb-4">
-            <span class="material-symbols-outlined text-white text-4xl">agriculture</span>
-          </div>
+        <div class="bg-primary px-8 py-10 text-center relative overflow-hidden">
+          <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, white 10px, white 11px)"></div>
+          <img src="/logo.png" alt="Rékolte" class="h-20 w-20 rounded-2xl object-cover mx-auto mb-4 shadow-lg ring-2 ring-white/20" />
           <h1 class="text-3xl font-black text-white uppercase tracking-tight">Rékolte</h1>
           <p class="text-white/70 mt-1 text-sm font-medium">Sugarcane Yield Prediction System</p>
           <p class="text-white/50 mt-1 text-xs">Mauritius · Middlesex University</p>
@@ -42,15 +53,18 @@
         </div>
       </div>
 
-      <p class="text-center text-xs text-slate-400 mt-6">
-        © 2025 Rékolte · CST3990 Final Year Project · Middlesex University Mauritius
+      <p class="text-center text-xs text-white/40 mt-6">
+        © 2026 Rékolte · CST3990 Final Year Project · Middlesex University Mauritius
       </p>
     </div>
+
   </div>
+  </ion-page>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { IonPage } from '@ionic/vue'
 import { useRouter } from 'vue-router'
 import { authGoogle } from '@/services/api'
 import { useAuth } from '@/composables/useAuth'
@@ -66,7 +80,6 @@ onMounted(() => {
     return
   }
 
-  // Load Google Identity Services script
   const script = document.createElement('script')
   script.src = 'https://accounts.google.com/gsi/client'
   script.async = true

@@ -6,46 +6,9 @@
       <main class="px-6 py-8 w-full flex flex-col gap-8">
 
         <!-- Page Header -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 class="text-3xl font-black text-primary">Historical Harvest Analysis</h2>
-            <p class="text-slate-500 text-sm mt-1">{{ filteredData.length }} records · Seasons 2008–2025</p>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="relative">
-              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
-              <input
-                v-model="searchQuery"
-                class="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm w-56 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                placeholder="Search records…"
-              />
-            </div>
-            <button
-              class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"
-              @click="clearFilters"
-            >
-              <span class="material-symbols-outlined text-sm">filter_list_off</span>
-              Clear
-            </button>
-          </div>
-        </div>
-
-        <!-- Filters row -->
-        <div class="flex flex-wrap gap-4 bg-white rounded-xl border border-slate-200 px-6 py-4 shadow-sm">
-          <div class="flex items-center gap-2">
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Region</label>
-            <select v-model="filterRegion" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-primary bg-parchment focus:ring-primary focus:border-primary outline-none">
-              <option value="">All Regions</option>
-              <option v-for="r in REGIONS" :key="r" :value="r">{{ regionLabel(r) }}</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Season</label>
-            <select v-model="filterSeason" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-primary bg-parchment focus:ring-primary focus:border-primary outline-none">
-              <option value="">All Seasons</option>
-              <option v-for="s in seasons" :key="s" :value="s">{{ s }}</option>
-            </select>
-          </div>
+        <div>
+          <h2 class="text-3xl font-black text-primary">Historical Harvest Analysis</h2>
+          <p class="text-slate-500 text-sm mt-1">Seasons 2008–2025</p>
         </div>
 
         <!-- Bar Chart -->
@@ -124,7 +87,7 @@
           </div>
           <div v-else class="divide-y divide-slate-100">
             <div
-              v-for="b in filteredBulletins" :key="b._id"
+              v-for="b in paginatedBulletins" :key="b._id"
               class="flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors"
             >
               <div class="flex items-center gap-3">
@@ -151,13 +114,78 @@
               </div>
             </div>
           </div>
+
+          <!-- Bulletin pagination -->
+          <div v-if="bulletinTotalPages > 1" class="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50">
+            <span class="text-xs text-slate-400">
+              {{ (bulletinPage - 1) * BULLETIN_PAGE_SIZE + 1 }}–{{ Math.min(bulletinPage * BULLETIN_PAGE_SIZE, filteredBulletins.length) }}
+              of {{ filteredBulletins.length }}
+            </span>
+            <div class="flex items-center gap-1">
+              <button
+                class="p-1.5 rounded border border-slate-200 hover:bg-white disabled:opacity-40"
+                :disabled="bulletinPage === 1"
+                @click="bulletinPage--"
+              >
+                <span class="material-symbols-outlined text-sm">chevron_left</span>
+              </button>
+              <template v-for="p in bulletinPageButtons" :key="p">
+                <span v-if="p === '...'" class="w-7 h-7 flex items-center justify-center text-xs text-slate-400">…</span>
+                <button
+                  v-else
+                  @click="bulletinPage = Number(p)"
+                  class="w-7 h-7 rounded border text-xs font-bold transition-colors"
+                  :class="bulletinPage === p ? 'bg-primary text-white border-primary' : 'border-slate-200 hover:bg-white'"
+                >{{ p }}</button>
+              </template>
+              <button
+                class="p-1.5 rounded border border-slate-200 hover:bg-white disabled:opacity-40"
+                :disabled="bulletinPage === bulletinTotalPages"
+                @click="bulletinPage++"
+              >
+                <span class="material-symbols-outlined text-sm">chevron_right</span>
+              </button>
+            </div>
+          </div>
         </section>
 
         <!-- Data Table -->
         <section class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-parchment/50">
-            <h3 class="font-bold text-slate-900">Season-End Records</h3>
-            <span class="text-xs font-medium text-slate-500">Showing {{ paginatedData.length }} of {{ filteredData.length }}</span>
+          <div class="px-6 py-4 border-b border-slate-100 bg-parchment/50 flex flex-wrap items-center gap-3">
+            <h3 class="font-bold text-slate-900 mr-2">Season-End Records</h3>
+
+            <!-- Region filter -->
+            <select v-model="filterRegion" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-primary bg-white focus:ring-primary focus:border-primary outline-none">
+              <option value="">All Regions</option>
+              <option v-for="r in REGIONS" :key="r" :value="r">{{ regionLabel(r) }}</option>
+            </select>
+
+            <!-- Season filter -->
+            <select v-model="filterSeason" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold text-primary bg-white focus:ring-primary focus:border-primary outline-none">
+              <option value="">All Seasons</option>
+              <option v-for="s in seasons" :key="s" :value="s">{{ s }}</option>
+            </select>
+
+            <!-- Search -->
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
+              <input
+                v-model="searchQuery"
+                class="pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded-lg text-sm w-44 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                placeholder="Search…"
+              />
+            </div>
+
+            <!-- Clear -->
+            <button
+              class="border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-white transition-colors"
+              @click="clearFilters"
+            >
+              <span class="material-symbols-outlined text-sm">filter_list_off</span>
+              Clear
+            </button>
+
+            <span class="ml-auto text-xs font-medium text-slate-500">{{ filteredData.length }} records</span>
           </div>
           <div v-if="loading" class="flex items-center justify-center py-12">
             <svg class="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
@@ -236,6 +264,7 @@
           <p class="text-xs text-slate-400 italic">Source: Mauritius Chamber of Agriculture Harvest Bulletins</p>
         </div>
       </main>
+      <FooterBar />
     </div>
   </ion-page>
 </template>
@@ -246,14 +275,20 @@ import { IonPage } from '@ionic/vue'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import NavBar from '@/components/NavBar.vue'
+import FooterBar from '@/components/FooterBar.vue'
 import { getHarvest, getBulletins, uploadBulletin, deleteBulletin as apiDeleteBulletin } from '@/services/api'
 import type { HarvestRecord, BulletinDoc } from '@/services/api'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
-const REGIONS = ['NORD', 'EST', 'SUD', 'OUEST', 'CENTRE']
+const REGIONS = ['NORD', 'CENTRE', 'EST', 'SUD', 'OUEST']
+const REGION_ORDER = ['NORD', 'CENTRE', 'EST', 'SUD', 'OUEST']
 const REGION_COLORS: Record<string, string> = {
-  NORD: '#2d5016', EST: '#3a6b1d', SUD: '#4a8524', OUEST: '#C8891A', CENTRE: '#7c6b3a',
+  NORD: '#ef4444',
+  CENTRE: '#3b82f6',
+  EST: '#eab308',
+  SUD: '#22c55e',
+  OUEST: '#f97316',
 }
 
 const loading = ref(true)
@@ -279,9 +314,13 @@ const bulletinSeasonFilter = ref<number | ''>('')
 const sortField = ref<keyof HarvestRecord>('season')
 const sortDir = ref<'asc' | 'desc'>('desc')
 
-// Pagination
+// Harvest table pagination
 const currentPage = ref(1)
 const PAGE_SIZE = 15
+
+// Bulletin pagination
+const bulletinPage = ref(1)
+const BULLETIN_PAGE_SIZE = 10
 
 const seasons = computed(() =>
   [...new Set(allData.value.map(d => d.season))].sort((a, b) => b - a)
@@ -313,9 +352,10 @@ function sortIcon(field: string) {
 }
 
 const filteredData = computed(() => {
+  currentPage.value = 1
   let data = [...allData.value]
   if (filterRegion.value) data = data.filter(d => d.region === filterRegion.value)
-  if (filterSeason.value) data = data.filter(d => d.season === filterSeason.value)
+  if (filterSeason.value) data = data.filter(d => d.season === Number(filterSeason.value))
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
     data = data.filter(d => d.region.toLowerCase().includes(q) || d.season.toString().includes(q))
@@ -343,8 +383,37 @@ const filteredAvgTsh = computed(() => {
 })
 
 const filteredBulletins = computed(() => {
+  bulletinPage.value = 1
   if (!bulletinSeasonFilter.value) return bulletins.value
   return bulletins.value.filter(b => b.season === bulletinSeasonFilter.value)
+})
+
+const bulletinTotalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredBulletins.value.length / BULLETIN_PAGE_SIZE))
+)
+
+const bulletinPageButtons = computed(() => {
+  const total = bulletinTotalPages.value
+  const cur = bulletinPage.value
+  const pages: (number | string)[] = []
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+    return pages
+  }
+
+  pages.push(1)
+  if (cur > 3) pages.push('...')
+  for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i)
+  if (cur < total - 2) pages.push('...')
+  pages.push(total)
+
+  return pages
+})
+
+const paginatedBulletins = computed(() => {
+  const start = (bulletinPage.value - 1) * BULLETIN_PAGE_SIZE
+  return filteredBulletins.value.slice(start, start + BULLETIN_PAGE_SIZE)
 })
 
 function handleBulletinUpload(e: Event) {
@@ -378,14 +447,16 @@ async function deleteBulletin(id: string) {
 }
 
 const barChartData = computed(() => {
-  const rows = allData.value.filter(d => d.season === chartSeason.value)
+  const byRegion = Object.fromEntries(
+    allData.value.filter(d => d.season === chartSeason.value).map(r => [r.region, r.tch])
+  )
   return {
-    labels: rows.map(r => regionLabel(r.region)),
+    labels: REGION_ORDER.map(r => regionLabel(r)),
     datasets: [{
       label: 'TCH',
-      data: rows.map(r => r.tch),
-      backgroundColor: rows.map(r => (REGION_COLORS[r.region] ?? '#2d5016') + 'cc'),
-      borderColor: rows.map(r => REGION_COLORS[r.region] ?? '#2d5016'),
+      data: REGION_ORDER.map(r => byRegion[r] ?? 0),
+      backgroundColor: REGION_ORDER.map(r => REGION_COLORS[r] + 'cc'),
+      borderColor: REGION_ORDER.map(r => REGION_COLORS[r]),
       borderWidth: 2,
       borderRadius: 6,
     }],
@@ -397,7 +468,7 @@ const barChartOptions = {
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
-    tooltip: { backgroundColor: '#2d5016', callbacks: { label: (ctx: any) => ` ${ctx.parsed.y} TCH` } },
+    tooltip: { backgroundColor: '#1e293b', callbacks: { label: (ctx: any) => ` ${ctx.parsed.y} TCH` } },
   },
   scales: {
     x: { grid: { display: false }, ticks: { color: '#64748b' } },

@@ -1,5 +1,17 @@
 <template>
   <ion-page>
+    <!-- Activation overlay -->
+    <div v-if="activating" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+      <div class="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 min-w-[280px]">
+        <svg class="animate-spin h-10 w-10 text-primary" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+        </svg>
+        <p class="text-primary font-bold text-lg">Switching Model</p>
+        <p class="text-slate-500 text-sm text-center">Refreshing predictions for this region…</p>
+      </div>
+    </div>
+
     <div class="h-full overflow-y-auto bg-parchment text-slate-900 font-sans flex flex-col">
       <NavBar />
 
@@ -13,14 +25,17 @@
           </nav>
           <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <div class="flex items-center gap-3 mb-2">
-                <h1 class="text-5xl font-black text-primary tracking-tight">{{ regionLabel(selectedRegion) }} Region</h1>
-                <select
-                  v-model="selectedRegion"
-                  class="ml-4 border border-primary/20 rounded-lg px-3 py-1.5 text-sm font-semibold text-primary bg-white focus:ring-2 focus:ring-primary/20"
-                >
-                  <option v-for="r in REGIONS" :key="r" :value="r">{{ regionLabel(r) }}</option>
-                </select>
+              <h1 class="text-5xl font-black text-primary tracking-tight mb-3">{{ regionLabel(selectedRegion) }} Region</h1>
+              <!-- Region pill selector -->
+              <div class="flex flex-wrap gap-2 mb-3">
+                <button
+                  v-for="r in REGIONS" :key="r"
+                  @click="selectedRegion = r"
+                  class="px-4 py-1.5 rounded-full text-sm font-bold transition-all"
+                  :class="selectedRegion === r
+                    ? 'bg-primary text-white shadow-md shadow-primary/20'
+                    : 'bg-white text-primary/60 border border-primary/15 hover:border-primary/40 hover:text-primary'"
+                >{{ regionLabel(r) }}</button>
               </div>
               <p class="text-primary/60 text-lg">Agricultural Performance &amp; Predictive Intelligence</p>
             </div>
@@ -42,8 +57,8 @@
         <!-- Main Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
           <!-- Yield Forecast Card -->
-          <div class="lg:col-span-5">
-            <div class="bg-white rounded-xl p-8 border border-primary/10 shadow-sm relative overflow-hidden">
+          <div class="lg:col-span-5 flex flex-col">
+            <div class="bg-white rounded-xl p-8 border border-primary/10 shadow-sm relative overflow-hidden h-full">
               <h3 class="text-primary/70 font-bold uppercase tracking-wider text-xs mb-6">Yield Forecast (TCH)</h3>
 
               <div v-if="loadingPrediction" class="flex items-center justify-center py-8">
@@ -118,6 +133,41 @@
           </div>
         </div>
 
+        <!-- Model Switcher -->
+        <div class="mb-6 bg-white rounded-xl p-6 border border-primary/10 shadow-sm">
+          <h3 class="text-xs font-bold text-primary/50 uppercase tracking-wider mb-4">Active Prediction Model</h3>
+          <div class="flex flex-wrap gap-3">
+            <div
+              v-for="m in models" :key="m._id"
+              class="flex items-center gap-1 rounded-xl border transition-all"
+              :class="m.is_active ? 'border-primary bg-primary text-white' : 'border-slate-200 bg-white text-slate-700'"
+            >
+              <button
+                :disabled="activating || m.is_active"
+                @click="activate(m._id)"
+                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+                :class="m.is_active ? 'cursor-default' : 'hover:bg-primary/5'"
+              >
+                <span class="material-symbols-outlined text-base">{{ m.type === 'XGBoost' ? 'bolt' : 'forest' }}</span>
+                <div class="text-left">
+                  <p class="font-bold text-sm leading-none">{{ m.type }}</p>
+                  <p class="text-[11px] mt-0.5 opacity-70">LOSO R² {{ m.loso_r2.toFixed(4) }}</p>
+                </div>
+                <span v-if="m.is_active" class="ml-1 text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">Active</span>
+                <span v-else class="ml-1 text-[10px] font-bold text-primary/60">Switch</span>
+              </button>
+              <button
+                v-if="!m.is_active"
+                @click="deleteM(m._id)"
+                class="px-2 py-3 text-slate-400 hover:text-red-500 transition-colors"
+                title="Delete model"
+              >
+                <span class="material-symbols-outlined text-base">delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Key Stats Row -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="bg-white rounded-xl p-6 border-b-4 border-primary shadow-sm">
@@ -164,28 +214,24 @@
           </div>
         </div>
 
-        <footer class="mt-12 pt-8 border-t border-primary/10 flex justify-between items-center opacity-60">
-          <p class="text-xs font-medium">Data: Mauritius Chamber of Agriculture Harvest Bulletins 2008–2025</p>
-          <div class="flex gap-6 text-xs font-bold uppercase tracking-widest">
-            <router-link to="/history" class="hover:text-primary">Full History</router-link>
-            <router-link to="/compare" class="hover:text-primary">Compare Models</router-link>
-          </div>
-        </footer>
       </main>
+      <FooterBar />
     </div>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { IonPage } from '@ionic/vue'
+import { IonPage, onIonViewWillEnter } from '@ionic/vue'
+import { modelActivatedAt } from '@/stores/appState'
 import { Line } from 'vue-chartjs'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
   LineElement, Title, Tooltip, Legend, Filler,
 } from 'chart.js'
 import NavBar from '@/components/NavBar.vue'
-import { getHarvest, getPredictions, runPrediction as apiRunPrediction, getModels } from '@/services/api'
+import FooterBar from '@/components/FooterBar.vue'
+import { getHarvest, getPredictions, runPrediction as apiRunPrediction, getModels, activateModel, deleteModel } from '@/services/api'
 import type { HarvestRecord, PredictionRecord, ModelConfig } from '@/services/api'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
@@ -193,6 +239,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 const REGIONS = ['NORD', 'EST', 'SUD', 'OUEST', 'CENTRE']
 const selectedRegion = ref('CENTRE')
 const predicting = ref(false)
+const activating = ref(false)
 const loadingHistory = ref(true)
 const loadingPrediction = ref(true)
 
@@ -203,7 +250,10 @@ const models = ref<ModelConfig[]>([])
 const activeModel = computed(() => models.value.find(m => m.is_active) ?? null)
 
 const latestPrediction = computed(() =>
-  predictions.value.find(p => p.region === selectedRegion.value) ?? null
+  predictions.value.find(p =>
+    p.region === selectedRegion.value &&
+    (!activeModel.value || p.model_used === activeModel.value.type)
+  ) ?? null
 )
 
 const latestHarvest = computed(() => {
@@ -221,16 +271,21 @@ async function loadRegionData() {
     ])
     history.value = harvest
     predictions.value = preds
+
   } finally {
     loadingHistory.value = false
     loadingPrediction.value = false
   }
 }
 
-onMounted(async () => {
+async function refresh() {
   models.value = await getModels()
   await loadRegionData()
-})
+}
+
+onMounted(refresh)
+onIonViewWillEnter(refresh)
+watch(modelActivatedAt, refresh)
 
 watch(selectedRegion, loadRegionData)
 
@@ -238,12 +293,35 @@ async function runPrediction() {
   predicting.value = true
   try {
     const result = await apiRunPrediction(selectedRegion.value)
-    // Prepend so it shows as latest
     predictions.value = [result, ...predictions.value.filter(p => p.region !== selectedRegion.value)]
   } catch (e: any) {
     alert('Prediction failed: ' + e.message)
   } finally {
     predicting.value = false
+  }
+}
+
+async function activate(id: string) {
+  activating.value = true
+  try {
+    await activateModel(id)
+    models.value = await getModels()
+    await loadRegionData()
+    modelActivatedAt.value = Date.now()
+  } catch (e: any) {
+    alert('Activation failed: ' + e.message)
+  } finally {
+    activating.value = false
+  }
+}
+
+async function deleteM(id: string) {
+  if (!confirm('Delete this model? This cannot be undone.')) return
+  try {
+    await deleteModel(id)
+    models.value = await getModels()
+  } catch (e: any) {
+    alert('Delete failed: ' + e.message)
   }
 }
 

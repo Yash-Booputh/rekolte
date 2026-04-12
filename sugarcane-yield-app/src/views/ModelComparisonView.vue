@@ -132,86 +132,10 @@
             </div>
           </div>
 
-          <!-- Model Management -->
-          <div class="bg-white rounded-xl p-8 shadow-sm border border-primary/10">
-            <h2 class="text-xl font-bold text-slate-900 mb-2">Model Management</h2>
-            <p class="text-slate-500 text-sm mb-6">Upload new models or change the active model used for predictions.</p>
-
-            <div class="space-y-4 mb-8">
-              <div
-                v-for="m in models" :key="m._id"
-                class="flex items-center justify-between p-4 rounded-xl border transition-all"
-                :class="m.is_active ? 'border-primary bg-primary/5' : 'border-slate-200'"
-              >
-                <div class="flex items-center gap-4">
-                  <div class="size-10 rounded-lg flex items-center justify-center" :class="m.is_active ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'">
-                    <span class="material-symbols-outlined text-base">{{ m.type === 'XGBoost' ? 'bolt' : 'forest' }}</span>
-                  </div>
-                  <div>
-                    <p class="font-bold text-slate-800">{{ m.type }}</p>
-                    <p class="text-xs text-slate-400">LOSO R²: {{ m.loso_r2.toFixed(4) }} · RMSE: {{ m.loso_rmse.toFixed(4) }}</p>
-                  </div>
-                  <span v-if="m.is_active" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">Active</span>
-                </div>
-                <button
-                  v-if="!m.is_active"
-                  class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors"
-                  @click="activate(m._id)"
-                >Set Active</button>
-              </div>
-            </div>
-
-            <!-- Upload new model -->
-            <div class="border-t border-slate-100 pt-6">
-              <h3 class="font-bold text-slate-700 mb-4 text-sm uppercase tracking-wider">Upload New Model</h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Model Type</label>
-                  <select v-model="uploadType" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-primary bg-white outline-none">
-                    <option value="RandomForest">Random Forest</option>
-                    <option value="XGBoost">XGBoost</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Model File (.joblib or .ubj)</label>
-                  <input type="file" accept=".joblib,.ubj" @change="onFileSelect" class="w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white" />
-                </div>
-                <div>
-                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">LOSO R²</label>
-                  <input v-model="uploadMetrics.loso_r2" type="number" step="0.0001" placeholder="e.g. 0.5138" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none" />
-                </div>
-                <div>
-                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">LOSO RMSE</label>
-                  <input v-model="uploadMetrics.loso_rmse" type="number" step="0.0001" placeholder="e.g. 7.5354" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none" />
-                </div>
-                <div>
-                  <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">LOSO MAE</label>
-                  <input v-model="uploadMetrics.loso_mae" type="number" step="0.0001" placeholder="e.g. 5.9433" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none" />
-                </div>
-              </div>
-              <button
-                class="mt-4 flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                :disabled="uploading || !selectedFile"
-                @click="submitUpload"
-              >
-                <svg v-if="uploading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                </svg>
-                <span class="material-symbols-outlined text-sm" v-else>upload</span>
-                {{ uploading ? 'Uploading…' : 'Upload Model' }}
-              </button>
-            </div>
-          </div>
         </template>
       </main>
 
-      <footer class="mt-auto border-t border-primary/10 py-8 px-10 bg-white">
-        <div class="max-w-[1200px] mx-auto flex justify-between items-center">
-          <p class="text-sm text-primary/60">© 2025 Rékolte · Middlesex University Mauritius</p>
-          <p class="text-xs text-slate-400">Metrics from LOSO cross-validation on 2008–2024 training data.</p>
-        </div>
-      </footer>
+      <FooterBar />
     </div>
   </ion-page>
 </template>
@@ -222,18 +146,15 @@ import { IonPage } from '@ionic/vue'
 import { Scatter } from 'vue-chartjs'
 import { Chart as ChartJS, LinearScale, PointElement, LineElement, Tooltip, Legend } from 'chart.js'
 import NavBar from '@/components/NavBar.vue'
-import { getModels, activateModel, uploadModel } from '@/services/api'
+import FooterBar from '@/components/FooterBar.vue'
+import { getModels } from '@/services/api'
 import type { ModelConfig } from '@/services/api'
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend)
 
 const loading = ref(true)
-const uploading = ref(false)
 const evalSet = ref<'loso' | 'test'>('loso')
 const models = ref<ModelConfig[]>([])
-const selectedFile = ref<File | null>(null)
-const uploadType = ref('XGBoost')
-const uploadMetrics = ref({ loso_r2: '', loso_rmse: '', loso_mae: '' })
 
 const rfModel  = computed(() => models.value.find(m => m.type === 'RandomForest'))
 const xgbModel = computed(() => models.value.find(m => m.type === 'XGBoost'))
@@ -265,11 +186,27 @@ const r2WinPct = computed(() => {
   return (((xgbModel.value as any)[k] - (rfModel.value as any)[k]) / Math.abs((rfModel.value as any)[k]) * 100).toFixed(1)
 })
 
-const scatterData = computed(() => {
+const scatterData = computed((): any => {
   const rfPreds = rfModel.value?.holdout_predictions ?? []
   const xgbPreds = xgbModel.value?.holdout_predictions ?? []
+
+  const allActual = [...rfPreds.map(p => p.actual_tch), ...xgbPreds.map(p => p.actual_tch)]
+  const minV = allActual.length ? Math.min(...allActual) - 5 : 50
+  const maxV = allActual.length ? Math.max(...allActual) + 5 : 100
+
   return {
     datasets: [
+      {
+        label: 'Perfect Prediction',
+        data: [{ x: minV, y: minV }, { x: maxV, y: maxV }],
+        type: 'line' as const,
+        borderColor: 'rgba(200,137,26,0.6)',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        fill: false,
+        tension: 0,
+      },
       {
         label: 'Random Forest',
         data: rfPreds.map(p => ({ x: p.actual_tch, y: p.rf_predicted })),
@@ -297,7 +234,13 @@ const scatterOptions = {
     legend: { display: false },
     tooltip: {
       backgroundColor: '#2d5016',
-      callbacks: { label: (ctx: any) => ` Actual: ${ctx.parsed.x} → Predicted: ${ctx.parsed.y}` },
+      callbacks: {
+        label: (ctx: any) => {
+          if (ctx.dataset.label === 'Perfect Prediction') return ''
+          return ` Actual: ${ctx.parsed.x} → Predicted: ${ctx.parsed.y}`
+        },
+      },
+      filter: (item: any) => item.dataset.label !== 'Perfect Prediction',
     },
   },
   scales: {
@@ -321,33 +264,4 @@ onMounted(async () => {
   loading.value = false
 })
 
-async function activate(id: string) {
-  await activateModel(id)
-  models.value = await getModels()
-}
-
-function onFileSelect(e: Event) {
-  selectedFile.value = (e.target as HTMLInputElement).files?.[0] ?? null
-}
-
-async function submitUpload() {
-  if (!selectedFile.value) return
-  uploading.value = true
-  try {
-    const fd = new FormData()
-    fd.append('file', selectedFile.value)
-    fd.append('type', uploadType.value)
-    fd.append('loso_r2', String(uploadMetrics.value.loso_r2))
-    fd.append('loso_rmse', String(uploadMetrics.value.loso_rmse))
-    fd.append('loso_mae', String(uploadMetrics.value.loso_mae))
-    await uploadModel(fd)
-    models.value = await getModels()
-    selectedFile.value = null
-    uploadMetrics.value = { loso_r2: '', loso_rmse: '', loso_mae: '' }
-  } catch (e: any) {
-    alert('Upload failed: ' + e.message)
-  } finally {
-    uploading.value = false
-  }
-}
 </script>

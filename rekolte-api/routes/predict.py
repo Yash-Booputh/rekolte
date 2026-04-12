@@ -168,6 +168,55 @@ def _get_surface_prev(db, region, season_year):
     return 5000.0
 
 
+def run_all_predictions(db, model, config, user_email):
+    """Re-run predictions for all 5 regions using the given model and store them."""
+    for region in REGIONS:
+        try:
+            feat_doc = db.pre_harvest_features.find_one(
+                {"region": region},
+                sort=[("season", -1)]
+            )
+            if not feat_doc:
+                continue
+
+            season_year = feat_doc["season"]
+            surface_prev = feat_doc.get("surface_prev") or _get_surface_prev(db, region, season_year)
+            feat_doc["surface_prev"] = float(surface_prev)
+
+            features      = _build_feature_vector(feat_doc, region)
+            raw_pred      = _predict(model, features, db=db)
+            predicted_tch = float(raw_pred[0])
+
+            harvest_doc = db.harvest_data.find_one(
+                {"region": region, "season": season_year},
+                sort=[("week", -1)]
+            )
+            actual_tch = harvest_doc.get("tch") if harvest_doc else None
+
+            db.predictions.update_one(
+                {"region": region, "season": season_year, "model_used": config["type"]},
+                {"$set": {
+                    "predicted_tch": round(predicted_tch, 2),
+                    "actual_tch":    actual_tch,
+                    "model_used":    config["type"],
+                    "model_id":      str(config["_id"]),
+                    "feature_snapshot": {
+                        "ndvi_may":          feat_doc.get("ndvi_may"),
+                        "ndvi_growth":       feat_doc.get("ndvi_growth"),
+                        "ndvi_jan_may_mean": feat_doc.get("ndvi_jan_may_mean"),
+                        "cyclone_max_wind":  feat_doc.get("cyclone_max_wind"),
+                        "enso_oni_djf":      feat_doc.get("enso_oni_djf"),
+                        "surface_prev":      feat_doc.get("surface_prev"),
+                    },
+                    "created_by": user_email,
+                    "created_at": datetime.datetime.utcnow(),
+                }},
+                upsert=True,
+            )
+        except Exception as e:
+            print(f"[WARN] run_all_predictions skipped {region}: {e}", flush=True)
+
+
 @predict_bp.route("/ndvi/latest", methods=["GET"])
 @require_auth
 def get_latest_ndvi():
@@ -255,7 +304,11 @@ def predict():
         "created_by": request.user["email"],
         "created_at": datetime.datetime.utcnow(),
     }
-    db.predictions.insert_one(prediction_record)
+    db.predictions.update_one(
+        {"region": region, "season": season_year, "model_used": config["type"]},
+        {"$set": prediction_record},
+        upsert=True,
+    )
 
     from routes.notifications import create_notification
     create_notification(db, "prediction",

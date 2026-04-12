@@ -19,7 +19,7 @@
                 :class="mapMode === 'heatmap' ? 'bg-primary text-white' : 'text-slate-500 hover:text-primary'"
                 class="px-4 py-1.5 text-xs font-bold rounded-md transition-colors"
                 @click="mapMode = 'heatmap'"
-              >Heatmap</button>
+              >Map</button>
               <button
                 :class="mapMode === 'satellite' ? 'bg-primary text-white' : 'text-slate-500 hover:text-primary'"
                 class="px-4 py-1.5 text-xs font-bold rounded-md transition-colors"
@@ -36,12 +36,13 @@
               @region-click="onRegionClick"
             />
             <div class="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur p-4 rounded-lg shadow-md border border-slate-200 pointer-events-none">
-              <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Yield (TCH)</p>
+              <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Regions</p>
               <div class="flex flex-col gap-2">
-                <div class="flex items-center gap-2"><div class="size-3 rounded-sm" style="background:#2d5016"></div><span class="text-xs text-slate-700 font-medium">High (&gt;80)</span></div>
-                <div class="flex items-center gap-2"><div class="size-3 rounded-sm" style="background:#4a8524"></div><span class="text-xs text-slate-700 font-medium">Optimal (70–80)</span></div>
-                <div class="flex items-center gap-2"><div class="size-3 rounded-sm" style="background:#C8891A"></div><span class="text-xs text-slate-700 font-medium">Low (60–70)</span></div>
-                <div class="flex items-center gap-2"><div class="size-3 rounded-sm" style="background:#dc2626"></div><span class="text-xs text-slate-700 font-medium">Very Low (&lt;60)</span></div>
+                <div class="flex items-center gap-2"><div class="size-3 rounded-sm" style="background:#ef4444"></div><span class="text-xs text-slate-700 font-medium">Nord</span></div>
+                <div class="flex items-center gap-2"><div class="size-3 rounded-sm" style="background:#3b82f6"></div><span class="text-xs text-slate-700 font-medium">Centre</span></div>
+                <div class="flex items-center gap-2"><div class="size-3 rounded-sm" style="background:#eab308"></div><span class="text-xs text-slate-700 font-medium">Est</span></div>
+                <div class="flex items-center gap-2"><div class="size-3 rounded-sm" style="background:#22c55e"></div><span class="text-xs text-slate-700 font-medium">Sud</span></div>
+                <div class="flex items-center gap-2"><div class="size-3 rounded-sm" style="background:#f97316"></div><span class="text-xs text-slate-700 font-medium">Ouest</span></div>
               </div>
             </div>
           </div>
@@ -80,7 +81,7 @@
                   </div>
                 </div>
                 <div class="mt-4 flex items-center gap-2 relative z-10">
-                  <span class="text-white/40 text-xs">{{ predictions.length }} regions predicted</span>
+                  <span class="text-white/40 text-xs">{{ latestPerRegion.length }} regions predicted</span>
                 </div>
               </div>
 
@@ -109,20 +110,19 @@
                   <h4 class="font-bold text-primary text-sm uppercase tracking-wide">Regional Breakdown</h4>
                   <router-link to="/regions" class="text-xs font-bold text-accent hover:underline">View All</router-link>
                 </div>
-                <div v-if="predictions.length === 0" class="text-sm text-slate-400 text-center py-6">
+                <div v-if="latestPerRegion.length === 0" class="text-sm text-slate-400 text-center py-6">
                   No predictions yet. Go to Regions to run predictions.
                 </div>
                 <div v-else class="space-y-3">
                   <div
-                    v-for="p in predictions" :key="p.region"
-                    class="flex items-center justify-between p-3 bg-white rounded-lg border transition-all cursor-pointer group"
-                    :class="p.predicted_tch < 70 ? 'border-accent/20' : 'border-slate-100 hover:border-accent/30'"
+                    v-for="p in latestPerRegion" :key="p.region"
+                    class="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100 hover:border-slate-300 transition-all cursor-pointer"
                     @click="$router.push('/regions')"
                   >
                     <div class="flex items-center gap-3">
                       <div
-                        class="size-8 rounded flex items-center justify-center font-bold text-xs transition-colors"
-                        :class="p.predicted_tch < 70 ? 'bg-accent/20 text-accent' : 'bg-primary/10 text-primary group-hover:bg-accent group-hover:text-white'"
+                        class="size-8 rounded flex items-center justify-center font-bold text-xs text-white"
+                        :style="{ background: REGION_COLORS[p.region] ?? '#888' }"
                       >{{ p.region.slice(0,2) }}</div>
                       <div>
                         <p class="text-sm font-bold text-slate-800">{{ regionLabel(p.region) }}</p>
@@ -130,9 +130,7 @@
                       </div>
                     </div>
                     <div class="text-right">
-                      <p class="text-sm font-black" :class="p.predicted_tch < 70 ? 'text-accent' : 'text-primary'">
-                        {{ p.predicted_tch.toFixed(1) }}
-                      </p>
+                      <p class="text-sm font-black text-slate-800">{{ p.predicted_tch.toFixed(1) }}</p>
                       <p class="text-[10px] text-slate-400">TCH</p>
                     </div>
                   </div>
@@ -170,15 +168,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { IonPage } from '@ionic/vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { IonPage, onIonViewWillEnter } from '@ionic/vue'
+import { modelActivatedAt } from '@/stores/appState'
 import NavBar from '@/components/NavBar.vue'
 import LeafletMap from '@/components/LeafletMap.vue'
+import { REGION_COLORS } from '@/utils/regionColors'
 import { getPredictions, getModels, generateReport } from '@/services/api'
 import type { PredictionRecord, ModelConfig } from '@/services/api'
+import type { Region } from '@/data/mockData'
 
-const mapMode = ref<'heatmap' | 'satellite'>('heatmap')
-const selectedMapRegion = ref<string | null>(null)
+const mapMode = ref<'heatmap' | 'satellite'>('satellite')
+const selectedMapRegion = ref<Region | null>(null)
 const loading = ref(true)
 const reportLoading = ref(false)
 const predictions = ref<PredictionRecord[]>([])
@@ -187,10 +188,12 @@ const models = ref<ModelConfig[]>([])
 const activeModel = computed(() => models.value.find(m => m.is_active) ?? null)
 const latestSeason = computed(() => predictions.value[0]?.season ?? new Date().getFullYear())
 
-// Latest prediction per region
+// Latest prediction per region — filtered to the active model only
 const latestPerRegion = computed(() => {
+  const activeType = activeModel.value?.type
   const map = new Map<string, PredictionRecord>()
   for (const p of predictions.value) {
+    if (activeType && p.model_used !== activeType) continue
     if (!map.has(p.region)) map.set(p.region, p)
   }
   return Array.from(map.values())
@@ -203,10 +206,11 @@ const nationalAvgTch = computed(() => {
 })
 
 const mapRegionValues = computed(() =>
-  latestPerRegion.value.map(p => ({ region: p.region, tch: p.predicted_tch }))
+  latestPerRegion.value.map(p => ({ region: p.region as Region, tch: p.predicted_tch, model: p.model_used }))
 )
 
-onMounted(async () => {
+async function refresh() {
+  loading.value = true
   try {
     const [preds, mods] = await Promise.all([getPredictions(), getModels()])
     predictions.value = preds
@@ -214,10 +218,14 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
 
-function onRegionClick(region: string) {
-  selectedMapRegion.value = selectedMapRegion.value === region ? null : region
+onMounted(refresh)
+onIonViewWillEnter(refresh)
+watch(modelActivatedAt, refresh)
+
+function onRegionClick(region: string | null) {
+  selectedMapRegion.value = (region && selectedMapRegion.value !== region ? region : null) as Region | null
 }
 
 function regionLabel(id: string) {
@@ -228,13 +236,18 @@ function regionLabel(id: string) {
 }
 
 async function downloadReport() {
+  const season = latestPerRegion.value[0]?.season ?? latestSeason.value
+  if (!season) {
+    alert('No predictions available to generate a report. Run predictions first.')
+    return
+  }
   reportLoading.value = true
   try {
-    const blob = await generateReport({ season: latestSeason.value as number })
+    const blob = await generateReport({ season: season as number })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `rekolte_report_${latestSeason.value}.pdf`
+    a.download = `rekolte_report_${season}.pdf`
     a.click()
     URL.revokeObjectURL(url)
   } catch (e: any) {

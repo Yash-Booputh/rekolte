@@ -78,6 +78,9 @@ export const uploadModel = (formData: FormData) =>
 export const activateModel = (id: string) =>
   request<{ message: string }>('POST', `/models/${id}/activate`)
 
+export const deleteModel = (id: string) =>
+  request<{ message: string }>('DELETE', `/models/${id}`)
+
 // ── Bulletins ─────────────────────────────────────────────────────────────────
 export const getBulletins = (params?: { season?: number; type?: string }) =>
   request<BulletinDoc[]>('GET', `/bulletins${toQuery(params)}`)
@@ -192,7 +195,7 @@ export interface ModelConfig {
 export interface BulletinDoc {
   _id: string
   filename: string
-  cloudinaryUrl: string
+  driveFileId: string
   type: 'weekly' | 'crop_report' | 'other'
   season: number | null
   week: number | null
