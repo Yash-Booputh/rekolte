@@ -1,7 +1,7 @@
-# Rékolte — Sugarcane Yield Prediction System
+# Rékolte - Sugarcane Yield Prediction System
 
-**Student:** Yashvin Booputh (M01006629)  
-**Module:** CST3990 Undergraduate Individual Projects — Middlesex University Mauritius (Spring 2025/2026)  
+**Student:** Yashvin Booputh (M01006629)
+**Module:** CST3990 Undergraduate Individual Projects - Middlesex University Mauritius (Spring 2025/2026)
 **Supervisor:** Mr Reekesh Kumar Lall
 
 Predicts sugarcane TCH (tonnes cane per hectare) across 5 regions of Mauritius by combining 18 years of harvest bulletin data (2008–2025) with MODIS/Landsat/Sentinel-2 satellite imagery via Google Earth Engine, served through a Flask REST API and an Ionic + Vue 3 dashboard.
@@ -10,16 +10,16 @@ Predicts sugarcane TCH (tonnes cane per hectare) across 5 regions of Mauritius b
 
 ## Quick Links
 
-| Resource | Link |
-|----------|------|
-| GitHub Repository | https://github.com/Yash-Booputh/rekolte |
-| Live API (Render) | https://rekolte.onrender.com |
-| Google Drive — all project files | https://drive.google.com/drive/folders/19xcPdUTKmQ6SwwywC3ESEJSsSCLgvisH?usp=drive_link |
-| Dataset — `season_end_data.csv` | https://drive.google.com/file/d/1rf0nmIoWNOl-Rswx6n0FnQXDDUVqik3V/view?usp=drive_link |
-| Notebook 1 — Feature Extraction | https://drive.google.com/file/d/1z9OR0ND42NLBqnyyrq2H4B6JTrD2KK46/view?usp=drive_link |
-| Notebook 2 — Model Training (v3) | https://drive.google.com/file/d/11ZnWg68qbV5ZrSmZOZ400AbpfD9k32Ud/view?usp=drive_link |
+| Resource                                 | Link                                                                                    |
+| ---------------------------------------- | --------------------------------------------------------------------------------------- |
+| GitHub Repository                        | https://github.com/Yash-Booputh/rekolte                                                 |
+| Live API (Render)                        | https://rekolte.onrender.com                                                            |
+| Google Drive — all project files        | https://drive.google.com/drive/folders/19xcPdUTKmQ6SwwywC3ESEJSsSCLgvisH?usp=drive_link |
+| Dataset —`season_end_data.csv`        | https://drive.google.com/file/d/1rf0nmIoWNOl-Rswx6n0FnQXDDUVqik3V/view?usp=drive_link   |
+| Notebook 1 — Feature Extraction         | https://drive.google.com/file/d/1z9OR0ND42NLBqnyyrq2H4B6JTrD2KK46/view?usp=drive_link   |
+| Notebook 2 — Model Training (v3)        | https://drive.google.com/file/d/11ZnWg68qbV5ZrSmZOZ400AbpfD9k32Ud/view?usp=drive_link   |
 | Harvest Bulletins 2008–2025 (~500 PDFs) | https://drive.google.com/drive/folders/1kM8gtdRc3eIqdlBBooZDix-6-44VA1zD?usp=drive_link |
-| GEE Project ID | `rekolte-491422` (project number: 228444571212) |
+| GEE Project ID                           | `rekolte-491422` (project number: 228444571212)                                       |
 
 > **Note:** The API on Render is on a free tier and may take ~30 seconds to wake up on first request (UptimeRobot pings it every 5 minutes to keep it warm).
 
@@ -62,6 +62,7 @@ Extracts pre-harvest features for each region and season using Google Earth Engi
 Output: `pre_harvest_features.csv` → saved to Drive `model_v3/`
 
 To run:
+
 1. Open in Google Colab
 2. Authenticate with a Google account that has access to GEE project `rekolte-491422`
 3. Run all cells — outputs are written directly to the linked Google Drive folder
@@ -72,16 +73,17 @@ Trains the v3 pre-harvest XGBoost model on 39 features using Leave-One-Season-Ou
 
 **Model performance:**
 
-| Metric | XGBoost (v3, active) | Random Forest (baseline) |
-|--------|---------------------|--------------------------|
-| LOSO R² | 0.5484 | 0.4174 |
-| LOSO RMSE | 7.29 TCH | 8.28 TCH |
-| 2025 Holdout R² | 0.7717 | 0.5393 |
-| 2025 Holdout RMSE | 4.14 TCH | 5.88 TCH |
+| Metric            | XGBoost (v3, active) | Random Forest (baseline) |
+| ----------------- | -------------------- | ------------------------ |
+| LOSO R²          | 0.5484               | 0.4174                   |
+| LOSO RMSE         | 7.29 TCH             | 8.28 TCH                 |
+| 2025 Holdout R²  | 0.7717               | 0.5393                   |
+| 2025 Holdout RMSE | 4.14 TCH             | 5.88 TCH                 |
 
 Top features: `ndvi_may` (1), `surface_prev` (2), `ndvi_growth` (3), `ndvi_jan_may_mean` (4)
 
 Output files saved to Drive `model_v3/`:
+
 - `xgb_model_v3.ubj` — trained XGBoost model
 - `rf_model_v3.joblib` — trained Random Forest model
 - `feature_cols_v3.json` — ordered feature list (39 features)
@@ -93,17 +95,18 @@ Output files saved to Drive `model_v3/`:
 
 **`season_end_data.csv`** — 90 rows, one per region per season (2008–2025).
 
-| Column | Description |
-|--------|-------------|
-| `season` | Harvest year (2008–2025) |
-| `region` | NORD / SUD / EST / OUEST / CENTRE |
-| `surface_harvested` | Hectares harvested |
-| `cane_production` | Tonnes of cane |
-| `sugar_production` | Tonnes of sugar |
-| `tch` | Tonnes cane per hectare (target variable) |
-| `tsh` | Tonnes sugar per hectare |
+| Column                | Description                               |
+| --------------------- | ----------------------------------------- |
+| `season`            | Harvest year (2008–2025)                 |
+| `region`            | NORD / SUD / EST / OUEST / CENTRE         |
+| `surface_harvested` | Hectares harvested                        |
+| `cane_production`   | Tonnes of cane                            |
+| `sugar_production`  | Tonnes of sugar                           |
+| `tch`               | Tonnes cane per hectare (target variable) |
+| `tsh`               | Tonnes sugar per hectare                  |
 
 Extracted from ~500 harvest bulletin PDFs using `model/extract_bulletins.py`. Bulletins sourced from:
+
 - 2020–2025: https://mauritius-chamber-of-agriculture.org/statistics/sugar-sector-2/
 - 2008–2019: https://www.msiri.mu/index.php?langue=eng&rub=188
 
@@ -115,22 +118,22 @@ The Flask API is live at **https://rekolte.onrender.com**.
 
 All endpoints (except `/api/ping`) require a JWT bearer token obtained via Google OAuth (`POST /api/auth/google`).
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/ping` | Health check |
-| POST | `/api/auth/google` | Exchange Google ID token → JWT |
-| GET | `/api/harvest` | Historical harvest data (filterable by region/season) |
-| GET | `/api/ndvi/latest` | Latest pre-harvest NDVI features per region |
-| POST | `/api/predict` | Run prediction for a region (`{"region": "NORD"}`) |
-| GET | `/api/predictions` | Stored predictions (filterable by region/season) |
-| GET | `/api/bulletins` | List uploaded bulletins |
-| POST | `/api/bulletins/upload` | Upload bulletin PDF to Google Drive |
-| GET | `/api/models` | List model configurations and metrics |
-| POST | `/api/models/upload` | Upload a new model file |
-| POST | `/api/models/:id/activate` | Set a model as active |
-| POST | `/api/reports/generate` | Generate PDF yield report (download) |
-| GET | `/api/notifications` | Fetch notifications for logged-in user |
-| POST | `/api/notifications/read-all` | Mark all notifications as read |
+| Method | Endpoint                        | Description                                           |
+| ------ | ------------------------------- | ----------------------------------------------------- |
+| GET    | `/api/ping`                   | Health check                                          |
+| POST   | `/api/auth/google`            | Exchange Google ID token → JWT                       |
+| GET    | `/api/harvest`                | Historical harvest data (filterable by region/season) |
+| GET    | `/api/ndvi/latest`            | Latest pre-harvest NDVI features per region           |
+| POST   | `/api/predict`                | Run prediction for a region (`{"region": "NORD"}`)  |
+| GET    | `/api/predictions`            | Stored predictions (filterable by region/season)      |
+| GET    | `/api/bulletins`              | List uploaded bulletins                               |
+| POST   | `/api/bulletins/upload`       | Upload bulletin PDF to Google Drive                   |
+| GET    | `/api/models`                 | List model configurations and metrics                 |
+| POST   | `/api/models/upload`          | Upload a new model file                               |
+| POST   | `/api/models/:id/activate`    | Set a model as active                                 |
+| POST   | `/api/reports/generate`       | Generate PDF yield report (download)                  |
+| GET    | `/api/notifications`          | Fetch notifications for logged-in user                |
+| POST   | `/api/notifications/read-all` | Mark all notifications as read                        |
 
 ### Running the API locally
 
@@ -178,16 +181,16 @@ Open http://localhost:5173 and sign in with any Google account. Roles are assign
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
+| Layer          | Technology                                                     |
+| -------------- | -------------------------------------------------------------- |
 | Satellite data | Google Earth Engine (MODIS, Landsat, Sentinel-2, CHIRPS, ERA5) |
-| ML | scikit-learn (Random Forest), XGBoost |
-| Backend | Flask + gunicorn, Python 3.11 |
-| Database | MongoDB Atlas (free M0) |
-| File storage | Google Drive (service account) |
-| Auth | Google OAuth 2.0 + JWT |
-| Frontend | Ionic 8, Vue 3, Vite, Tailwind CSS |
-| Maps | Leaflet.js |
-| Charts | Chart.js + vue-chartjs |
-| Hosting (API) | Render.com (free tier) |
-| PDF reports | ReportLab |
+| ML             | scikit-learn (Random Forest), XGBoost                          |
+| Backend        | Flask + gunicorn, Python 3.11                                  |
+| Database       | MongoDB Atlas (free M0)                                        |
+| File storage   | Google Drive (service account)                                 |
+| Auth           | Google OAuth 2.0 + JWT                                         |
+| Frontend       | Ionic 8, Vue 3, Vite, Tailwind CSS                             |
+| Maps           | Leaflet.js                                                     |
+| Charts         | Chart.js + vue-chartjs                                         |
+| Hosting (API)  | Render.com (free tier)                                         |
+| PDF reports    | ReportLab                                                      |
