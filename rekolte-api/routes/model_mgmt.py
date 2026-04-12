@@ -40,7 +40,18 @@ def upload_model():
     file.save(filepath)
 
     db = get_db()
-    doc = {
+
+    # Delete the old file on disk if we're replacing an existing model of this type
+    existing = db.model_config.find_one({"type": model_type})
+    if existing and existing.get("filepath"):
+        old_path = os.path.join(MODELS_DIR, existing["filepath"])
+        if os.path.exists(old_path) and old_path != filepath:
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    update_fields = {
         "type": model_type,
         "filepath": filename,
         "loso_r2":   float(request.form.get("loso_r2", 0)),
@@ -54,18 +65,55 @@ def upload_model():
         "mae":       float(request.form.get("loso_mae", 0)),
         "feature_importance": [],
         "holdout_predictions": [],
-        "is_active": False,
         "uploaded_at": datetime.datetime.utcnow(),
         "uploaded_by": request.user["email"],
     }
-    result = db.model_config.insert_one(doc)
+    # Upsert by type — one entry per model type, uploading a new version replaces the old one.
+    # Preserve is_active: only set it on insert (new type), leave it unchanged on replace.
+    result = db.model_config.update_one(
+        {"type": model_type},
+        {"$set": update_fields, "$setOnInsert": {"is_active": False}},
+        upsert=True,
+    )
+
+    # Clear the model cache so the next prediction loads the new file
+    from routes.predict import _model_cache
+    _model_cache.clear()
+
+    doc_id = str(existing["_id"]) if existing else str(result.upserted_id)
 
     create_notification(db, "model_uploaded",
         f"New {model_type} model uploaded by {request.user['email']}",
         {"model_type": model_type, "uploaded_by": request.user["email"]}
     )
 
-    return jsonify({"message": "Model uploaded", "id": str(result.inserted_id)}), 201
+    return jsonify({"message": "Model uploaded", "id": doc_id}), 201
+
+@model_mgmt_bp.route("/models/<model_id>", methods=["DELETE"])
+@require_auth
+def delete_model(model_id):
+    db = get_db()
+    doc = db.model_config.find_one({"_id": ObjectId(model_id)})
+    if not doc:
+        return jsonify({"error": "Model not found"}), 404
+    if doc.get("is_active"):
+        return jsonify({"error": "Cannot delete the active model. Activate a different model first."}), 400
+
+    # Remove file from disk
+    filepath = os.path.join(MODELS_DIR, doc["filepath"])
+    if os.path.exists(filepath):
+        try:
+            os.remove(filepath)
+        except OSError:
+            pass
+
+    # Clear cache entry
+    from routes.predict import _model_cache
+    _model_cache.pop(filepath, None)
+
+    db.model_config.delete_one({"_id": ObjectId(model_id)})
+    return jsonify({"message": "Model deleted"})
+
 
 @model_mgmt_bp.route("/models/<model_id>/activate", methods=["POST"])
 @require_auth

@@ -11,7 +11,7 @@ from routes.notifications import notifications_bp
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, origins="*")
+    CORS(app, origins="*", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 
     prefix = "/api"
     app.register_blueprint(auth_bp, url_prefix=prefix)
