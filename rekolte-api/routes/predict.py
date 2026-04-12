@@ -1,9 +1,7 @@
 import os
-import json as _json
 import datetime
 import joblib
 import numpy as np
-import xgboost as xgb
 from xgboost import XGBRegressor
 from flask import Blueprint, request, jsonify
 from db import get_db
@@ -12,67 +10,73 @@ from config import MODELS_DIR
 
 predict_bp = Blueprint("predict", __name__)
 
-REGIONS      = ["NORD", "SUD", "EST", "OUEST", "CENTRE"]
-MONTH_SUFFIX = ["june", "july", "aug", "sep", "oct", "nov", "dec"]
+REGIONS = ["NORD", "SUD", "EST", "OUEST", "CENTRE"]
 
-# ── Feature order must match 02_model_training_final.ipynb exactly (31 features) ──
-# 1.  ndvi_june..ndvi_dec          (7)   monthly NDVI
-# 2.  ndvi_mean, ndvi_max,         (3)   season NDVI aggregates
-#     ndvi_cumulative
-# 3.  region_EST, region_NORD,     (4)   one-hot region (CENTRE = baseline)
-#     region_OUEST, region_SUD
-# 4.  satellite_landsat8,          (2)   one-hot sensor (landsat7 = baseline)
-#     satellite_sentinel2
-# 5.  rainfall_june..rainfall_dec  (7)   CHIRPS monthly rainfall (mm)
-# 6.  temp_june..temp_dec          (7)   ERA5 monthly temperature (°C)
-# 7.  surface_prev                 (1)   previous season harvested area (ha)
+# ── Feature order must match feature_cols_v3.json exactly (39 features) ─────
+# 1.  ndvi_lag_mean, ndvi_lag_max, ndvi_lag_std, ndvi_lag_cumulative   (4)
+# 2.  rainfall_lag_total, temp_lag_mean                                (2)
+# 3.  ndvi_oct..ndvi_may                                               (8)
+# 4.  rainfall_oct..rainfall_may                                       (8)
+# 5.  temp_oct..temp_may                                               (8)
+# 6.  region_EST, region_NORD, region_OUEST, region_SUD               (4)
+# 7.  surface_prev                                                     (1)
+# 8.  ndvi_growth, ndvi_jan_may_mean                                   (2)
+# 9.  cyclone_max_wind, enso_oni_djf                                   (2)
+#                                                                    = 39
 
 
-def _build_feature_vector(ndvi_doc, region, surface_prev):
-    """Build the 31-element feature vector matching training feature order."""
-    # Monthly NDVI — fall back to ndvi_mean if a month is missing
-    ndvi_monthly = [
-        ndvi_doc.get(f"ndvi_{m}") or ndvi_doc["ndvi_mean"]
-        for m in MONTH_SUFFIX
-    ]
-    ndvi_agg = [ndvi_doc["ndvi_mean"], ndvi_doc["ndvi_max"], ndvi_doc["ndvi_cumulative"]]
-
-    # Region one-hot (alphabetical: EST, NORD, OUEST, SUD — CENTRE baseline)
-    region_dummies = [
+def _build_feature_vector(doc, region):
+    """Build the 39-element feature vector matching feature_cols_v3.json order."""
+    features = [
+        # Lagged NDVI (previous season Jun-Dec)
+        doc["ndvi_lag_mean"],
+        doc["ndvi_lag_max"],
+        doc["ndvi_lag_std"],
+        doc["ndvi_lag_cumulative"],
+        # Lagged climate
+        doc["rainfall_lag_total"],
+        doc["temp_lag_mean"],
+        # MODIS NDVI Oct-May
+        doc["ndvi_oct"],
+        doc["ndvi_nov"],
+        doc["ndvi_dec"],
+        doc["ndvi_jan"],
+        doc["ndvi_feb"],
+        doc["ndvi_mar"],
+        doc["ndvi_apr"],
+        doc["ndvi_may"],
+        # CHIRPS monthly rainfall Oct-May
+        doc["rainfall_oct"],
+        doc["rainfall_nov"],
+        doc["rainfall_dec"],
+        doc["rainfall_jan"],
+        doc["rainfall_feb"],
+        doc["rainfall_mar"],
+        doc["rainfall_apr"],
+        doc["rainfall_may"],
+        # ERA5 monthly temperature Oct-May
+        doc["temp_oct"],
+        doc["temp_nov"],
+        doc["temp_dec"],
+        doc["temp_jan"],
+        doc["temp_feb"],
+        doc["temp_mar"],
+        doc["temp_apr"],
+        doc["temp_may"],
+        # Region one-hot (CENTRE = baseline)
         1 if region == "EST"   else 0,
         1 if region == "NORD"  else 0,
         1 if region == "OUEST" else 0,
         1 if region == "SUD"   else 0,
+        # Previous season harvested area
+        doc["surface_prev"],
+        # Derived NDVI features
+        doc["ndvi_growth"],
+        doc["ndvi_jan_may_mean"],
+        # External climate indicators
+        doc["cyclone_max_wind"],
+        doc["enso_oni_djf"],
     ]
-
-    # Satellite one-hot (alphabetical: landsat8, sentinel2 — landsat7 baseline)
-    satellite = ndvi_doc.get("satellite") or ndvi_doc.get("satellite_source", "sentinel2")
-    sat_dummies = [
-        1 if satellite == "landsat8"  else 0,
-        1 if satellite == "sentinel2" else 0,
-    ]
-
-    # Monthly rainfall — fall back to 0 if missing (CHIRPS complete for 2008-2025)
-    rain_monthly = [
-        float(ndvi_doc.get(f"rainfall_{m}") or 0.0)
-        for m in MONTH_SUFFIX
-    ]
-
-    # Monthly temperature — fall back to 25°C if missing (ERA5 complete for 2008-2025)
-    temp_monthly = [
-        float(ndvi_doc.get(f"temp_{m}") or 25.0)
-        for m in MONTH_SUFFIX
-    ]
-
-    features = (
-        ndvi_monthly        # 7
-        + ndvi_agg          # 3
-        + region_dummies    # 4
-        + sat_dummies       # 2
-        + rain_monthly      # 7
-        + temp_monthly      # 7
-        + [surface_prev]    # 1
-    )                       # = 31
     return np.array([features], dtype=float)
 
 
@@ -80,33 +84,9 @@ _model_cache = {}
 
 def _load_model(filepath):
     if filepath not in _model_cache:
-        if filepath.endswith(".ubj"):
-            model = XGBRegressor()
-            model.load_model(filepath)
-        else:
-            model = joblib.load(filepath)
-        _model_cache[filepath] = model
+        _model_cache[filepath] = joblib.load(filepath)
     return _model_cache[filepath]
 
-def _predict(model, X):
-    """
-    Unified predict. For XGBRegressor, applies a base_score correction.
-
-    XGBoost 2.x serialisation (joblib or save_model) loses the auto-estimated
-    base_score from the booster's internal init-prediction, resetting it to 0.5.
-    The Python wrapper attribute (model.base_score) IS correctly preserved by
-    joblib. We compute the correction from those two values — no hardcoding.
-    """
-    if isinstance(model, XGBRegressor):
-        py_bs = float(getattr(model, 'base_score', 0.5) or 0.5)
-        cfg = _json.loads(model.get_booster().save_config())
-        booster_bs = float(cfg['learner']['learner_model_param']['base_score'])
-        correction = py_bs - booster_bs
-        raw = model.get_booster().predict(xgb.DMatrix(X))
-        if abs(correction) > 0.1:
-            print(f"[INFO] XGBoost base_score correction: {booster_bs:.4f} -> {py_bs:.6f} (+{correction:.4f})", flush=True)
-        return raw + correction
-    return model.predict(X)
 
 def _get_active_model():
     db = get_db()
@@ -118,32 +98,32 @@ def _get_active_model():
         return None, None
     return _load_model(filepath), config
 
+
 def _get_surface_prev(db, region, season_year):
-    """Previous season's harvested area — captures the survivor effect.
-    Falls back to current season area, then a global default."""
+    """Previous season's harvested area — fallback chain."""
     doc = db.harvest_data.find_one(
         {"region": region, "season": season_year - 1},
         {"surface_harvested": 1}
     )
     if doc and doc.get("surface_harvested"):
         return float(doc["surface_harvested"])
-    # Fallback: use current season's own area (e.g. first season in DB)
     doc_curr = db.harvest_data.find_one(
         {"region": region, "season": season_year},
         {"surface_harvested": 1}
     )
     if doc_curr and doc_curr.get("surface_harvested"):
         return float(doc_curr["surface_harvested"])
-    return 5000.0  # conservative global default
+    return 5000.0
 
 
 @predict_bp.route("/ndvi/latest", methods=["GET"])
 @require_auth
 def get_latest_ndvi():
+    """Return latest pre-harvest feature summary per region."""
     db = get_db()
     results = {}
     for region in REGIONS:
-        doc = db.satellite_features.find_one(
+        doc = db.pre_harvest_features.find_one(
             {"region": region},
             sort=[("season", -1)]
         )
@@ -151,12 +131,11 @@ def get_latest_ndvi():
             results[region] = {
                 "region":            region,
                 "season":            doc["season"],
-                "satellite":         doc.get("satellite") or doc.get("satellite_source"),
-                "ndvi_mean":         doc["ndvi_mean"],
-                "ndvi_max":          doc["ndvi_max"],
-                "ndvi_cumulative":   doc["ndvi_cumulative"],
-                "observation_count": doc.get("observation_count", 0),
-                "extracted_at":      str(doc.get("extracted_at", "")),
+                "ndvi_may":          doc.get("ndvi_may"),
+                "ndvi_growth":       doc.get("ndvi_growth"),
+                "ndvi_jan_may_mean": doc.get("ndvi_jan_may_mean"),
+                "cyclone_max_wind":  doc.get("cyclone_max_wind"),
+                "enso_oni_djf":      doc.get("enso_oni_djf"),
             }
     return jsonify(results)
 
@@ -164,7 +143,7 @@ def get_latest_ndvi():
 @predict_bp.route("/predict", methods=["POST"])
 @require_auth
 def predict():
-    data = request.get_json()
+    data   = request.get_json()
     region = (data.get("region") or "").upper() if data else ""
 
     if region not in REGIONS:
@@ -172,25 +151,29 @@ def predict():
 
     db = get_db()
 
-    # Latest NDVI + climate row for this region
-    ndvi_doc = db.satellite_features.find_one(
+    # Latest pre-harvest features for this region
+    feat_doc = db.pre_harvest_features.find_one(
         {"region": region},
         sort=[("season", -1)]
     )
-    if not ndvi_doc:
-        return jsonify({"error": f"No NDVI data available for {region}"}), 404
+    if not feat_doc:
+        return jsonify({"error": f"No pre-harvest feature data available for {region}"}), 404
 
     model, config = _get_active_model()
     if not model:
         return jsonify({"error": "No active model available"}), 503
 
-    season_year  = ndvi_doc["season"]
-    surface_prev = _get_surface_prev(db, region, season_year)
+    season_year = feat_doc["season"]
 
-    features      = _build_feature_vector(ndvi_doc, region, surface_prev)
-    predicted_tch = float(_predict(model, features)[0])
+    # surface_prev: use value stored in doc (seeded from harvest_data)
+    # or recompute as fallback
+    surface_prev = feat_doc.get("surface_prev") or _get_surface_prev(db, region, season_year)
+    feat_doc["surface_prev"] = float(surface_prev)
 
-    # Check if we have actual TCH for comparison
+    features      = _build_feature_vector(feat_doc, region)
+    predicted_tch = float(model.predict(features)[0])
+
+    # Actual TCH for comparison (if season is complete)
     harvest_doc = db.harvest_data.find_one(
         {"region": region, "season": season_year},
         sort=[("week", -1)]
@@ -204,12 +187,13 @@ def predict():
         "actual_tch":    actual_tch,
         "model_used":    config["type"],
         "model_id":      str(config["_id"]),
-        "ndvi_snapshot": {
-            "ndvi_mean":         ndvi_doc["ndvi_mean"],
-            "ndvi_max":          ndvi_doc["ndvi_max"],
-            "ndvi_cumulative":   ndvi_doc["ndvi_cumulative"],
-            "observation_count": ndvi_doc.get("observation_count", 0),
-            "extracted_at":      ndvi_doc.get("extracted_at"),
+        "feature_snapshot": {
+            "ndvi_may":          feat_doc.get("ndvi_may"),
+            "ndvi_growth":       feat_doc.get("ndvi_growth"),
+            "ndvi_jan_may_mean": feat_doc.get("ndvi_jan_may_mean"),
+            "cyclone_max_wind":  feat_doc.get("cyclone_max_wind"),
+            "enso_oni_djf":      feat_doc.get("enso_oni_djf"),
+            "surface_prev":      feat_doc.get("surface_prev"),
         },
         "created_by": request.user["email"],
         "created_at": datetime.datetime.utcnow(),
@@ -218,16 +202,12 @@ def predict():
 
     from routes.notifications import create_notification
     create_notification(db, "prediction",
-        f"Prediction run for {region}: {round(predicted_tch, 2)} TCH (season {season_year})",
+        f"Pre-harvest forecast for {region}: {round(predicted_tch, 2)} TCH (season {season_year})",
         {"region": region, "season": season_year, "predicted_tch": round(predicted_tch, 2)}
     )
 
     prediction_record.pop("_id", None)
     prediction_record["created_at"] = prediction_record["created_at"].isoformat()
-    if prediction_record["ndvi_snapshot"].get("extracted_at"):
-        prediction_record["ndvi_snapshot"]["extracted_at"] = str(
-            prediction_record["ndvi_snapshot"]["extracted_at"]
-        )
 
     return jsonify(prediction_record)
 

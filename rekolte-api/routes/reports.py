@@ -54,7 +54,7 @@ def generate_report():
     report_data = []
     for r in regions_to_report:
         pred = db.predictions.find_one({"region": r, "season": season}, sort=[("created_at", -1)])
-        ndvi = db.satellite_features.find_one({"region": r, "season": season})
+        feat = db.pre_harvest_features.find_one({"region": r, "season": season})
         harvest = db.harvest_data.find_one({"region": r, "season": season}, sort=[("week", -1)])
 
         report_data.append({
@@ -62,8 +62,8 @@ def generate_report():
             "predicted_tch": pred["predicted_tch"] if pred else None,
             "actual_tch": harvest["tch"] if harvest else None,
             "model_used": pred["model_used"] if pred else "N/A",
-            "ndvi_mean": ndvi["ndvi_mean"] if ndvi else None,
-            "ndvi_max": ndvi["ndvi_max"] if ndvi else None,
+            "ndvi_mean": feat["ndvi_jan_may_mean"] if feat else None,
+            "ndvi_max":  feat["ndvi_may"]          if feat else None,
             "surface_harvested": harvest.get("surface_harvested") if harvest else None,
         })
 
