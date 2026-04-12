@@ -200,7 +200,7 @@ const REGION_META: Record<string, { label: string }> = {
 async function loadBoundaries() {
   const regions = ['NORD', 'SUD', 'EST', 'OUEST', 'CENTRE'] as const
   const results = await Promise.all(
-    regions.map(r => fetch(`${import.meta.env.PROD ? '/rekolte/' : '/'}mapping_boundaries/${r}_boundary.geojson`).then(res => res.json()))
+    regions.map(r => fetch(`${import.meta.env.BASE_URL}mapping_boundaries/${r}_boundary.geojson`).then(res => res.json()))
   )
   const features = results.map((fc, i) => {
     const region = regions[i]

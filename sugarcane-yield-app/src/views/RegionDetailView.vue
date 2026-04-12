@@ -12,10 +12,10 @@
       </div>
     </div>
 
-    <div class="h-full overflow-y-auto bg-parchment text-slate-900 font-sans flex flex-col">
+    <div class="h-full overflow-y-auto bg-parchment text-slate-900 font-sans flex flex-col pb-14 md:pb-0">
       <NavBar />
 
-      <main class="px-6 py-8 w-full">
+      <main class="px-4 md:px-6 py-6 md:py-8 w-full">
         <!-- Header -->
         <div class="mb-8">
           <nav class="flex items-center gap-2 text-sm text-primary/60 mb-4 font-medium">
@@ -216,6 +216,7 @@
 
       </main>
       <FooterBar />
+      <BottomTabBar />
     </div>
   </ion-page>
 </template>
@@ -230,6 +231,7 @@ import {
   LineElement, Title, Tooltip, Legend, Filler,
 } from 'chart.js'
 import NavBar from '@/components/NavBar.vue'
+import BottomTabBar from '@/components/BottomTabBar.vue'
 import FooterBar from '@/components/FooterBar.vue'
 import { getHarvest, getPredictions, runPrediction as apiRunPrediction, getModels, activateModel, deleteModel } from '@/services/api'
 import type { HarvestRecord, PredictionRecord, ModelConfig } from '@/services/api'

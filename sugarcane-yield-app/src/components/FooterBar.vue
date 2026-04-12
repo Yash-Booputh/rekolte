@@ -1,6 +1,6 @@
 <template>
   <footer class="bg-primary text-white/75 shrink-0">
-    <div class="px-8 py-4 grid grid-cols-3 gap-4 items-start text-[11px]">
+    <div class="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-start text-[11px]">
 
       <!-- Left: Branding -->
       <div class="flex flex-col gap-0.5">
@@ -21,8 +21,8 @@
           <span class="material-symbols-outlined text-accent" style="font-size:14px">call</span>
           (+230) 590 82464
         </a>
-        <a href="mailto:yashvinbooputh2@gmail.com" class="flex items-center gap-1.5 hover:text-white transition-colors">
-          <span class="material-symbols-outlined text-accent" style="font-size:14px">mail</span>
+        <a href="mailto:yashvinbooputh2@gmail.com" class="flex items-start gap-1.5 hover:text-white transition-colors break-all">
+          <span class="material-symbols-outlined text-accent shrink-0" style="font-size:14px">mail</span>
           yashvinbooputh2@gmail.com
         </a>
       </div>

@@ -1,22 +1,23 @@
 <template>
-  <header class="flex items-center justify-between bg-primary text-white px-8 py-4 shadow-lg sticky top-0 z-50">
-    <!-- Logo -->
-    <router-link to="/dashboard" class="flex items-center gap-3 hover:opacity-90 transition-opacity">
-      <img src="/logo.png" alt="Rékolte" class="h-14 w-14 rounded-xl object-cover" />
-      <h1 class="text-2xl font-black tracking-tight uppercase">Rékolte</h1>
-    </router-link>
+  <header class="bg-primary text-white shadow-lg sticky top-0 z-50">
+    <div class="flex items-center justify-between px-4 md:px-8 py-3 md:py-4">
+      <!-- Logo -->
+      <router-link to="/dashboard" class="flex items-center gap-3 hover:opacity-90 transition-opacity">
+        <img src="/logo.png" alt="Rékolte" class="h-10 w-10 md:h-14 md:w-14 rounded-xl object-cover" />
+        <h1 class="text-xl md:text-2xl font-black tracking-tight uppercase">Rékolte</h1>
+      </router-link>
 
-    <!-- Nav links -->
-    <nav class="hidden md:flex items-center gap-10">
-      <router-link
-        v-for="link in links" :key="link.to" :to="link.to"
-        class="text-sm font-medium text-white/80 hover:text-white transition-colors"
-        active-class="!font-bold border-b-2 border-accent pb-1 !text-white"
-      >{{ link.label }}</router-link>
-    </nav>
+      <!-- Nav links (desktop) -->
+      <nav class="hidden md:flex items-center gap-10">
+        <router-link
+          v-for="link in links" :key="link.to" :to="link.to"
+          class="text-sm font-medium text-white/80 hover:text-white transition-colors"
+          active-class="!font-bold border-b-2 border-accent pb-1 !text-white"
+        >{{ link.label }}</router-link>
+      </nav>
 
-    <!-- Right side -->
-    <div class="flex items-center gap-4">
+      <!-- Right side -->
+      <div class="flex items-center gap-2 md:gap-4">
       <!-- Notification bell -->
       <div class="relative" v-click-outside="() => notifOpen = false">
         <button
@@ -119,7 +120,27 @@
           </div>
         </div>
       </div>
+
+      <!-- Hamburger (mobile only) -->
+      <button
+        class="md:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
+        @click="mobileMenuOpen = !mobileMenuOpen"
+        aria-label="Toggle menu"
+      >
+        <span class="material-symbols-outlined">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
+      </button>
+      </div>
     </div>
+
+    <!-- Mobile nav drawer -->
+    <nav v-if="mobileMenuOpen" class="md:hidden border-t border-white/10 px-4 pb-3">
+      <router-link
+        v-for="link in links" :key="link.to" :to="link.to"
+        class="flex items-center gap-3 py-3 text-sm font-medium text-white/80 hover:text-white border-b border-white/10 last:border-0 transition-colors"
+        active-class="!font-bold !text-white"
+        @click="mobileMenuOpen = false"
+      >{{ link.label }}</router-link>
+    </nav>
   </header>
 
   <!-- Upload New Model modal -->
@@ -217,6 +238,7 @@ const { user, logout } = useAuth()
 
 const notifOpen = ref(false)
 const userOpen = ref(false)
+const mobileMenuOpen = ref(false)
 const settingsOpen = ref(false)
 const uploadModelOpen = ref(false)
 const uploading = ref(false)

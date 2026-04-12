@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <div class="h-full overflow-y-auto bg-parchment text-slate-900 font-sans flex flex-col">
+    <div class="h-full overflow-y-auto bg-parchment text-slate-900 font-sans flex flex-col pb-14 md:pb-0">
       <NavBar />
 
       <main class="w-full px-6 py-8">
@@ -136,6 +136,7 @@
       </main>
 
       <FooterBar />
+      <BottomTabBar />
     </div>
   </ion-page>
 </template>
@@ -146,6 +147,7 @@ import { IonPage } from '@ionic/vue'
 import { Scatter } from 'vue-chartjs'
 import { Chart as ChartJS, LinearScale, PointElement, LineElement, Tooltip, Legend } from 'chart.js'
 import NavBar from '@/components/NavBar.vue'
+import BottomTabBar from '@/components/BottomTabBar.vue'
 import FooterBar from '@/components/FooterBar.vue'
 import { getModels } from '@/services/api'
 import type { ModelConfig } from '@/services/api'

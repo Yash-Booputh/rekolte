@@ -1,9 +1,9 @@
 <template>
   <ion-page>
-    <div class="h-full overflow-y-auto bg-parchment text-slate-900 font-sans flex flex-col">
+    <div class="h-full overflow-y-auto bg-parchment text-slate-900 font-sans flex flex-col pb-14 md:pb-0">
       <NavBar />
 
-      <main class="px-6 py-8 w-full flex flex-col gap-8">
+      <main class="px-4 md:px-6 py-6 md:py-8 w-full flex flex-col gap-6 md:gap-8">
 
         <!-- Page Header -->
         <div>
@@ -33,20 +33,21 @@
 
         <!-- Bulletins Section -->
         <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-primary/5">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary">description</span>
+          <div class="px-4 md:px-6 py-4 border-b border-slate-100 flex flex-wrap items-center gap-3 bg-primary/5">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <span class="material-symbols-outlined text-primary shrink-0">description</span>
               <h3 class="font-bold text-primary">Harvest Bulletins</h3>
-              <span class="text-xs text-slate-400">({{ bulletins.length }} files)</span>
+              <span class="text-xs text-slate-400 shrink-0">({{ bulletins.length }} files)</span>
             </div>
-            <div class="flex items-center gap-3">
-              <select v-model="bulletinSeasonFilter" class="border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary bg-white outline-none">
+            <div class="flex items-center gap-2 flex-wrap">
+              <select v-model="bulletinSeasonFilter" class="border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold text-primary bg-white outline-none">
                 <option value="">All Seasons</option>
                 <option v-for="s in seasons" :key="s" :value="s">{{ s }}</option>
               </select>
-              <label class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold cursor-pointer hover:bg-primary/90 transition-colors">
+              <label class="flex items-center gap-1.5 bg-primary text-white px-3 py-2 rounded-lg text-sm font-bold cursor-pointer hover:bg-primary/90 transition-colors">
                 <span class="material-symbols-outlined text-sm">upload</span>
-                Upload PDF
+                <span class="hidden sm:inline">Upload PDF</span>
+                <span class="sm:hidden">Upload</span>
                 <input type="file" accept=".pdf" class="hidden" @change="handleBulletinUpload" />
               </label>
             </div>
@@ -151,7 +152,7 @@
 
         <!-- Data Table -->
         <section class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          <div class="px-6 py-4 border-b border-slate-100 bg-parchment/50 flex flex-wrap items-center gap-3">
+          <div class="px-4 md:px-6 py-4 border-b border-slate-100 bg-parchment/50 flex flex-wrap items-center gap-2 md:gap-3">
             <h3 class="font-bold text-slate-900 mr-2">Season-End Records</h3>
 
             <!-- Region filter -->
@@ -171,7 +172,7 @@
               <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
               <input
                 v-model="searchQuery"
-                class="pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded-lg text-sm w-44 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                class="pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded-lg text-sm w-32 md:w-44 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                 placeholder="Search…"
               />
             </div>
@@ -265,6 +266,7 @@
         </div>
       </main>
       <FooterBar />
+      <BottomTabBar />
     </div>
   </ion-page>
 </template>
@@ -275,6 +277,7 @@ import { IonPage } from '@ionic/vue'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import NavBar from '@/components/NavBar.vue'
+import BottomTabBar from '@/components/BottomTabBar.vue'
 import FooterBar from '@/components/FooterBar.vue'
 import { getHarvest, getBulletins, uploadBulletin, deleteBulletin as apiDeleteBulletin } from '@/services/api'
 import type { HarvestRecord, BulletinDoc } from '@/services/api'

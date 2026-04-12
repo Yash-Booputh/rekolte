@@ -6,8 +6,10 @@ import path from 'path'
 import { defineConfig } from 'vite'
 
 // https://vitejs.dev/config/
+const isCapacitor = process.env.CAPACITOR_BUILD === 'true'
+
 export default defineConfig({
-  base: '/rekolte/',
+  base: isCapacitor ? '/' : '/rekolte/',
   plugins: [
     vue(),
     legacy()

@@ -1,11 +1,11 @@
 <template>
   <ion-page>
-    <div class="flex flex-col h-screen bg-parchment leaf-pattern text-slate-900">
+    <div class="flex flex-col h-screen overflow-y-auto lg:overflow-hidden bg-parchment leaf-pattern text-slate-900 pb-14 md:pb-0">
       <NavBar />
 
-      <main class="flex-1 flex overflow-hidden">
+      <main class="flex flex-col lg:flex-1 lg:flex-row lg:overflow-hidden">
         <!-- Left: Map -->
-        <section class="flex-1 relative p-6 flex flex-col gap-4">
+        <section class="shrink-0 lg:flex-1 relative p-4 lg:p-6 flex flex-col gap-4">
           <div class="flex items-center justify-between mb-2">
             <div>
               <h2 class="text-xl font-bold text-primary flex items-center gap-2">
@@ -28,7 +28,7 @@
             </div>
           </div>
 
-          <div class="flex-1 rounded-xl border border-slate-200 shadow-inner relative" style="min-height:420px; position:relative;">
+          <div class="h-72 lg:h-auto lg:flex-1 rounded-xl border border-slate-200 shadow-inner relative" style="position:relative;">
             <LeafletMap
               :region-values="mapRegionValues"
               :selected-region="selectedMapRegion"
@@ -49,7 +49,7 @@
         </section>
 
         <!-- Right: Summary Panel -->
-        <aside class="w-[420px] bg-white/50 backdrop-blur-xl border-l border-slate-200 flex flex-col overflow-y-auto">
+        <aside class="w-full lg:w-[420px] bg-white/50 backdrop-blur-xl border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col lg:overflow-y-auto">
           <div class="p-8">
             <div class="mb-8">
               <span class="inline-block px-3 py-1 bg-accent/20 text-accent text-xs font-bold rounded-full mb-3 uppercase tracking-wider">
@@ -163,6 +163,7 @@
           </div>
         </aside>
       </main>
+      <BottomTabBar />
     </div>
   </ion-page>
 </template>
@@ -170,8 +171,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { IonPage, onIonViewWillEnter } from '@ionic/vue'
+import { Capacitor } from '@capacitor/core'
 import { modelActivatedAt } from '@/stores/appState'
 import NavBar from '@/components/NavBar.vue'
+import BottomTabBar from '@/components/BottomTabBar.vue'
 import LeafletMap from '@/components/LeafletMap.vue'
 import { REGION_COLORS } from '@/utils/regionColors'
 import { getPredictions, getModels, generateReport } from '@/services/api'
@@ -244,12 +247,29 @@ async function downloadReport() {
   reportLoading.value = true
   try {
     const blob = await generateReport({ season: season as number })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `rekolte_report_${season}.pdf`
-    a.click()
-    URL.revokeObjectURL(url)
+
+    if (Capacitor.isNativePlatform()) {
+      // On Android: write to cache dir then share
+      const { Filesystem, Directory } = await import('@capacitor/filesystem')
+      const { Share } = await import('@capacitor/share')
+      const reader = new FileReader()
+      reader.readAsDataURL(blob)
+      reader.onloadend = async () => {
+        const base64 = (reader.result as string).split(',')[1]
+        const fileName = `rekolte_report_${season}.pdf`
+        await Filesystem.writeFile({ path: fileName, data: base64, directory: Directory.Cache })
+        const { uri } = await Filesystem.getUri({ path: fileName, directory: Directory.Cache })
+        await Share.share({ title: `Rékolte Report ${season}`, url: uri, dialogTitle: 'Save or share report' })
+      }
+    } else {
+      // Web: standard anchor download
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `rekolte_report_${season}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
   } catch (e: any) {
     alert('Report generation failed: ' + e.message)
   } finally {

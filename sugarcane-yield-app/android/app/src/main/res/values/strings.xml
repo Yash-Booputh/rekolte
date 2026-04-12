@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rékolte</string>
+    <string name="title_activity_main">Rékolte</string>
+    <string name="package_name">mu.ac.mua.rekolte</string>
+    <string name="custom_url_scheme">mu.ac.mua.rekolte</string>
+    <string name="server_client_id">228444571212-es502ug06qfnglj5964v6fllsbajtsl1.apps.googleusercontent.com</string>
+</resources>
