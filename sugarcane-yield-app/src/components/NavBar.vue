@@ -290,7 +290,7 @@ async function submitUpload() {
 
 function handleLogout() {
   logout()
-  window.location.replace('/login')
+  router.replace('/login')
 }
 
 function notifIcon(type: string) {

@@ -24,7 +24,7 @@ async function request<T>(
   if (res.status === 401) {
     localStorage.removeItem('rekolte_token')
     localStorage.removeItem('rekolte_user')
-    window.location.href = '/login'
+    window.location.href = import.meta.env.BASE_URL + '#/login'
     throw new Error('Unauthorized')
   }
 

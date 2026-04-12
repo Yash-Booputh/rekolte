@@ -3,7 +3,7 @@
   <div class="min-h-screen relative overflow-hidden flex items-center justify-center px-4">
 
     <!-- ── Sugarcane field photo background ─────────────────────────────── -->
-    <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" style="background-image: url('/login.jpg')"></div>
+    <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" :style="`background-image: url('${$router.options.history.base.replace(/\/$/, '')}/login.jpg')`"></div>
     <!-- Dark overlay for readability -->
     <div class="absolute inset-0 bg-black/55"></div>
     <!-- Subtle green tint to tie into brand -->
