@@ -10,7 +10,6 @@ ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "yashvinbooputh2@gmail.com")
 JWT_EXPIRY_DAYS = 7
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 
-# Cloudinary — bulletin PDF storage
-CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
-CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "")
-CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "")
+# Google Drive — bulletin PDF storage
+GOOGLE_SERVICE_ACCOUNT_JSON = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+DRIVE_BULLETINS_FOLDER_ID = os.environ.get("DRIVE_BULLETINS_FOLDER_ID", "")
