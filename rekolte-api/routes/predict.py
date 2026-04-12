@@ -95,23 +95,47 @@ def _load_model(filepath):
     return _model_cache[filepath]
 
 
-def _predict(model, X):
+def _get_true_base_score(db):
+    """
+    Recover the auto-estimated XGBoost base_score = mean(y_train).
+    XGBoost trains with base_score=None so it estimates mean(TCH) from the
+    training set (2009-2024, 80 rows). We recompute it from MongoDB so we
+    don't need to hardcode it.
+    """
+    docs = list(db.harvest_data.find(
+        {"season": {"$gte": 2009, "$lte": 2024}},
+        {"tch": 1, "_id": 0}
+    ))
+    values = [d["tch"] for d in docs if d.get("tch")]
+    return float(np.mean(values)) if values else 75.0
+
+
+def _predict(model, X, db=None):
     """
     Unified predict. For XGBRegressor, applies a base_score correction.
 
-    XGBoost 2.x serialisation (joblib or save_model) loses the auto-estimated
-    base_score from the booster's internal init-prediction, resetting it to 0.5.
-    The Python wrapper attribute (model.base_score) IS correctly preserved by
-    joblib. We compute the correction from those two values — no hardcoding.
+    XGBoost 2.x with base_score=None auto-estimates it as mean(y). joblib
+    serialisation goes through xgb.Booster.__setstate__ which calls load_model()
+    internally — this silently resets the C++ base_score back to 0.5, and the
+    Python attribute model.base_score stays None. So after joblib load both
+    py_bs and booster_bs read as 0.5, correction = 0, raw prediction is ~2 TCH.
+
+    Fix: recompute the true base_score as mean(y_train) from MongoDB and use
+    that for the correction instead of the (broken) Python attribute.
     """
     if isinstance(model, XGBRegressor):
-        py_bs = float(getattr(model, 'base_score', 0.5) or 0.5)
+        py_bs = getattr(model, 'base_score', None)
+        if py_bs is None or abs(float(py_bs) - 0.5) < 0.01:
+            # base_score was auto-estimated and lost — recover from training data
+            py_bs = _get_true_base_score(db) if db is not None else 75.0
+            print(f"[INFO] XGB base_score recovered from training mean: {py_bs:.4f}", flush=True)
+        else:
+            py_bs = float(py_bs)
         cfg = _json.loads(model.get_booster().save_config())
         booster_bs = float(cfg['learner']['learner_model_param']['base_score'])
         correction = py_bs - booster_bs
         raw = model.get_booster().predict(xgb.DMatrix(X))
-        if abs(correction) > 0.1:
-            print(f"[INFO] XGBoost base_score correction: {booster_bs:.4f} -> {py_bs:.6f} (+{correction:.4f})", flush=True)
+        print(f"[INFO] XGB correction: booster_bs={booster_bs:.4f} py_bs={py_bs:.4f} correction={correction:.4f} raw={raw[0]:.4f}", flush=True)
         return raw + correction
     return model.predict(X)
 
@@ -199,7 +223,7 @@ def predict():
     feat_doc["surface_prev"] = float(surface_prev)
 
     features      = _build_feature_vector(feat_doc, region)
-    raw_pred      = _predict(model, features)
+    raw_pred      = _predict(model, features, db=db)
     predicted_tch = float(raw_pred[0])
 
     print(f"[DEBUG] region={region} model_type={type(model).__name__} "
