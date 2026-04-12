@@ -3,6 +3,7 @@
 **Student:** Yashvin Booputh (M01006629)
 **Module:** CST3990 Undergraduate Individual Projects - Middlesex University Mauritius (Spring 2025/2026)
 **Supervisor:** Mr Reekesh Kumar Lall
+**Title:** Predicting Sugarcane Yield In Mauritius using Satellite Imagery and Open-Source Machine Learning Models.
 
 Predicts sugarcane TCH (tonnes cane per hectare) across 5 regions of Mauritius by combining 18 years of harvest bulletin data (2008–2025) with MODIS/Landsat/Sentinel-2 satellite imagery via Google Earth Engine, served through a Flask REST API and an Ionic + Vue 3 dashboard.
 
@@ -19,7 +20,7 @@ Predicts sugarcane TCH (tonnes cane per hectare) across 5 regions of Mauritius b
 | Notebook 1 — Feature Extraction         | https://drive.google.com/file/d/1z9OR0ND42NLBqnyyrq2H4B6JTrD2KK46/view?usp=drive_link   |
 | Notebook 2 — Model Training (v3)        | https://drive.google.com/file/d/11ZnWg68qbV5ZrSmZOZ400AbpfD9k32Ud/view?usp=drive_link   |
 | Harvest Bulletins 2008–2025 (~500 PDFs) | https://drive.google.com/drive/folders/1kM8gtdRc3eIqdlBBooZDix-6-44VA1zD?usp=drive_link |
-| Live Frontend (GitHub Pages)             | https://yash-booputh.github.io/rekolte/                                               |
+| Live Frontend (GitHub Pages)             | https://yash-booputh.github.io/rekolte/                                                 |
 | GEE Project ID                           | `rekolte-491422` (project number: 228444571212)                                       |
 
 > **Note:** The API on Render is on a free tier and may take ~30 seconds to wake up on first request (UptimeRobot pings it every 5 minutes to keep it warm).
@@ -68,6 +69,10 @@ To run:
 2. Authenticate with a Google account that has access to GEE project `rekolte-491422`
 3. Run all cells — outputs are written directly to the linked Google Drive folder
 
+**NOTE:**
+**Execution:**
+No execution required. The notebook has already been run and outputs are saved.
+
 ### Notebook 2 — Model Training (`02_pre_harvest_training_v3.ipynb`)
 
 Trains the v3 pre-harvest XGBoost model on 39 features using Leave-One-Season-Out cross-validation.
@@ -89,8 +94,11 @@ Output files saved to Drive `model_v3/`:
 - `rf_model_v3.joblib` — trained Random Forest model
 - `feature_cols_v3.json` — ordered feature list (39 features)
 - `best_params_v3.json` — tuned hyperparameters
+NOTE:
+Execution:
+No execution required. The notebook has already been run and outputs are saved.
 
----
+-------------------------------------------------------------------------------
 
 ## Dataset
 
@@ -115,7 +123,7 @@ Extracted from ~500 harvest bulletin PDFs using `model/extract_bulletins.py`. Bu
 
 ## Backend API
 
-The Flask API is live at **https://rekolte.onrender.com**.
+The Flask API is live at **https://rekolte.onrender.com**. you will not be able to open it due to JWT Token!
 
 All endpoints (except `/api/ping`) require a JWT bearer token obtained via Google OAuth (`POST /api/auth/google`).
 
@@ -189,7 +197,7 @@ The live dashboard is at **https://yash-booputh.github.io/rekolte/**
 ### 1. Sign in
 
 - Click **Sign in with Google** and authenticate with any Google account.
-- First-time accounts are assigned the `agronomist` role automatically. To access admin features (model upload, bulletin upload), the account role must be set to `admin` in MongoDB.
+- First-time accounts are assigned the `agronomist` role automatically.
 
 ### 2. Dashboard
 

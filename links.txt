@@ -1,0 +1,23 @@
+Rékolte - [Predicting Sugarcane Yield in Mauritius using Satellite Imagery and Open-Source Machine Learning models]
+Student: Yashvin Booputh (M01006629)
+Module: CST3990 Undergraduate Individual Projects - Middlesex University Mauritius
+
+==============================================
+IMPORTANT: Please read the README in the GitHub repository first.
+All project information, setup instructions, and documentation are in the README.
+==============================================
+
+GitHub Repository:
+https://github.com/Yash-Booputh/rekolte
+
+Live Frontend (GitHub Pages):
+https://yash-booputh.github.io/rekolte/
+
+Google Drive (all project files — notebooks, model files, bulletins):
+https://drive.google.com/drive/folders/19xcPdUTKmQ6SwwywC3ESEJSsSCLgvisH?usp=drive_link
+
+Dataset (season_end_data.csv — 90 rows, 18 seasons x 5 regions):
+https://drive.google.com/file/d/1rf0nmIoWNOl-Rswx6n0FnQXDDUVqik3V/view?usp=drive_link
+
+Harvest Bulletins 2008-2025 (~500 PDFs):
+https://drive.google.com/drive/folders/1kM8gtdRc3eIqdlBBooZDix-6-44VA1zD?usp=drive_link
