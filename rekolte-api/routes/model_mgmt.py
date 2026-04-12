@@ -51,18 +51,23 @@ def upload_model():
             except OSError:
                 pass
 
+    def _f(key, default=0.0):
+        v = request.form.get(key, "")
+        try: return float(v) if v != "" else default
+        except (ValueError, TypeError): return default
+
     update_fields = {
         "type": model_type,
         "filepath": filename,
-        "loso_r2":   float(request.form.get("loso_r2", 0)),
-        "loso_rmse": float(request.form.get("loso_rmse", 0)),
-        "loso_mae":  float(request.form.get("loso_mae", 0)),
-        "test_r2":   float(request.form.get("test_r2", 0)),
-        "test_rmse": float(request.form.get("test_rmse", 0)),
-        "test_mae":  float(request.form.get("test_mae", 0)),
-        "r_squared": float(request.form.get("loso_r2", 0)),
-        "rmse":      float(request.form.get("loso_rmse", 0)),
-        "mae":       float(request.form.get("loso_mae", 0)),
+        "loso_r2":   _f("loso_r2"),
+        "loso_rmse": _f("loso_rmse"),
+        "loso_mae":  _f("loso_mae"),
+        "test_r2":   _f("test_r2"),
+        "test_rmse": _f("test_rmse"),
+        "test_mae":  _f("test_mae"),
+        "r_squared": _f("loso_r2"),
+        "rmse":      _f("loso_rmse"),
+        "mae":       _f("loso_mae"),
         "feature_importance": [],
         "holdout_predictions": [],
         "uploaded_at": datetime.datetime.utcnow(),
