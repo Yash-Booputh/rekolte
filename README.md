@@ -19,6 +19,7 @@ Predicts sugarcane TCH (tonnes cane per hectare) across 5 regions of Mauritius b
 | Notebook 1 — Feature Extraction         | https://drive.google.com/file/d/1z9OR0ND42NLBqnyyrq2H4B6JTrD2KK46/view?usp=drive_link   |
 | Notebook 2 — Model Training (v3)        | https://drive.google.com/file/d/11ZnWg68qbV5ZrSmZOZ400AbpfD9k32Ud/view?usp=drive_link   |
 | Harvest Bulletins 2008–2025 (~500 PDFs) | https://drive.google.com/drive/folders/1kM8gtdRc3eIqdlBBooZDix-6-44VA1zD?usp=drive_link |
+| Live Frontend (GitHub Pages)             | https://yash-booputh.github.io/rekolte/                                               |
 | GEE Project ID                           | `rekolte-491422` (project number: 228444571212)                                       |
 
 > **Note:** The API on Render is on a free tier and may take ~30 seconds to wake up on first request (UptimeRobot pings it every 5 minutes to keep it warm).
@@ -162,7 +163,9 @@ Ionic 8 + Vue 3 SPA with 5 views:
 - **Historical Data** — 18-season harvest data with charts; bulletin viewer and upload
 - **Model Comparison** — LOSO metrics, holdout performance, feature importance; model upload and activation
 
-### Running locally
+The frontend is deployed at **https://yash-booputh.github.io/rekolte/** and connects to the live Render API automatically — no setup needed.
+
+### Running locally (optional)
 
 ```bash
 cd sugarcane-yield-app
@@ -176,6 +179,47 @@ npm run dev
 ```
 
 Open http://localhost:5173 and sign in with any Google account. Roles are assigned in MongoDB — new accounts default to `agronomist`.
+
+---
+
+## Using the Dashboard
+
+The live dashboard is at **https://yash-booputh.github.io/rekolte/**
+
+### 1. Sign in
+
+- Click **Sign in with Google** and authenticate with any Google account.
+- First-time accounts are assigned the `agronomist` role automatically. To access admin features (model upload, bulletin upload), the account role must be set to `admin` in MongoDB.
+
+### 2. Dashboard
+
+- An interactive choropleth map of Mauritius shows all 5 sugarcane regions coloured by predicted TCH for the current season.
+- Hover over a region to see its predicted TCH value.
+- Click a region to go directly to its detail page.
+
+### 3. Region Detail
+
+- Shows the latest pre-harvest satellite features for that region (NDVI May, NDVI growth, cyclone wind, ENSO index).
+- Click **Run Prediction** to trigger the model and store a new prediction. The result appears immediately with predicted TCH and, if the season is complete, the actual TCH for comparison.
+
+### 4. Historical Data
+
+- Browse cumulative harvest data across all 18 seasons (2008–2025) with line and bar charts.
+- Use the region/season filters to narrow down.
+- **View Bulletins** — lists all uploaded PDFs; click to preview or download from Google Drive.
+- **Upload Bulletin** (admin only) — upload a new harvest bulletin PDF; it is stored in Google Drive and indexed in the database.
+
+### 5. Model Comparison
+
+- Displays LOSO cross-validation metrics and 2025 holdout results for all uploaded models side by side.
+- Shows feature importance chart and predicted vs actual scatter plot for the active model.
+- **Upload Model** (admin only) — upload a `.ubj` (XGBoost) or `.joblib` (Random Forest) file.
+- **Activate** — sets a model as active; all subsequent predictions use it.
+
+### 6. Notifications
+
+- The bell icon in the navbar shows unread notifications (new predictions, bulletin uploads).
+- Click to mark as read.
 
 ---
 
