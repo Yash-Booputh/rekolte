@@ -94,13 +94,14 @@ function onEachFeature(feature: any, layer: L.Layer) {
 }
 
 // ── Estate / mill marker data ────────────────────────────────
+const _base = import.meta.env.BASE_URL
 const ESTATE_MARKERS = [
-  { name: 'Terragen',                        region: 'NORD'  as Region, lat: -20.0676,           lng: 57.5991,           type: 'mill' as const, image: '/terra.png'    },
-  { name: 'Alteo (FUEL)',                    region: 'EST'   as Region, lat: -20.2199,           lng: 57.6917,           type: 'mill' as const, image: '/alteo.png'    },
-  { name: 'Médine Group',                    region: 'OUEST' as Region, lat: -20.2612,           lng: 57.3941,           type: 'farm' as const, image: '/medine.png'   },
-  { name: 'Omnicane',                        region: 'SUD'   as Region, lat: -20.4290,           lng: 57.6502,           type: 'mill' as const, image: '/omnicane.png' },
-  { name: 'MCIA',                            region: 'OUEST' as Region, lat: -20.238351468846233, lng: 57.496755557864894, type: 'govt' as const, image: '/mcia.png'    },
-  { name: 'Mauritius Chamber of Agriculture',region: 'OUEST' as Region, lat: -20.225417541038812, lng: 57.53335132363508,  type: 'govt' as const, image: '/chamber.png' },
+  { name: 'Terragen',                        region: 'NORD'  as Region, lat: -20.0676,           lng: 57.5991,           type: 'mill' as const, image: `${_base}terra.png`    },
+  { name: 'Alteo (FUEL)',                    region: 'EST'   as Region, lat: -20.2199,           lng: 57.6917,           type: 'mill' as const, image: `${_base}alteo.png`    },
+  { name: 'Médine Group',                    region: 'OUEST' as Region, lat: -20.2612,           lng: 57.3941,           type: 'farm' as const, image: `${_base}medine.png`   },
+  { name: 'Omnicane',                        region: 'SUD'   as Region, lat: -20.4290,           lng: 57.6502,           type: 'mill' as const, image: `${_base}omnicane.png` },
+  { name: 'MCIA',                            region: 'OUEST' as Region, lat: -20.238351468846233, lng: 57.496755557864894, type: 'govt' as const, image: `${_base}mcia.png`    },
+  { name: 'Mauritius Chamber of Agriculture',region: 'OUEST' as Region, lat: -20.225417541038812, lng: 57.53335132363508,  type: 'govt' as const, image: `${_base}chamber.png` },
 ]
 
 function millIconSize(zoom: number): number {
