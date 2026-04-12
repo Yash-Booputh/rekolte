@@ -249,13 +249,43 @@ const scatterOptions = {
   },
 }
 
+// Hardcoded fallback — matches seed_models.py values (v3 pre-harvest, 39 features)
+const FALLBACK_XGB_FI = [
+  { feature: 'ndvi_may',           importance: 0.1394 },
+  { feature: 'surface_prev',       importance: 0.1121 },
+  { feature: 'ndvi_growth',        importance: 0.0785 },
+  { feature: 'ndvi_jan_may_mean',  importance: 0.0719 },
+  { feature: 'region_OUEST',       importance: 0.0624 },
+  { feature: 'ndvi_lag_cumulative',importance: 0.0488 },
+  { feature: 'ndvi_feb',           importance: 0.0487 },
+  { feature: 'ndvi_lag_mean',      importance: 0.0456 },
+  { feature: 'ndvi_lag_max',       importance: 0.0390 },
+  { feature: 'rainfall_apr',       importance: 0.0357 },
+  { feature: 'temp_lag_mean',      importance: 0.0351 },
+  { feature: 'rainfall_may',       importance: 0.0308 },
+  { feature: 'rainfall_nov',       importance: 0.0264 },
+  { feature: 'ndvi_jan',           importance: 0.0207 },
+  { feature: 'temp_feb',           importance: 0.0187 },
+]
+const FALLBACK_RF_FI: Record<string, number> = {
+  ndvi_may: 0.0856, surface_prev: 0.2715, ndvi_growth: 0.0583,
+  ndvi_jan_may_mean: 0.0577, region_OUEST: 0.0075,
+  ndvi_lag_cumulative: 0.0150, ndvi_feb: 0.0923, ndvi_lag_mean: 0.0181,
+  ndvi_lag_max: 0.0327, rainfall_apr: 0.0372, temp_lag_mean: 0.0216,
+  rainfall_may: 0.0110, rainfall_nov: 0.0173, ndvi_jan: 0.0130, temp_feb: 0.0140,
+}
+
 const mergedFeatures = computed(() => {
-  const xgbFI = xgbModel.value?.feature_importance ?? []
+  const xgbFI = xgbModel.value?.feature_importance?.length
+    ? xgbModel.value.feature_importance
+    : FALLBACK_XGB_FI
   const rfFI  = rfModel.value?.feature_importance ?? []
-  return xgbFI.map((xf, i) => ({
+  return xgbFI.map((xf: any) => ({
     feature: xf.feature,
     xgb: xf.importance,
-    rf: rfFI[i]?.importance ?? 0,
+    rf: rfFI.find((r: any) => r.feature === xf.feature)?.importance
+      ?? FALLBACK_RF_FI[xf.feature]
+      ?? 0,
   })).sort((a, b) => b.xgb - a.xgb)
 })
 

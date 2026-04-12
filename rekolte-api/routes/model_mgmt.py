@@ -56,6 +56,11 @@ def upload_model():
         try: return float(v) if v != "" else default
         except (ValueError, TypeError): return default
 
+    # Preserve feature_importance and holdout_predictions from the existing doc
+    # (upload form doesn't send these; they come from the seed script or notebook export)
+    prev_fi   = existing.get("feature_importance", [])   if existing else []
+    prev_hp   = existing.get("holdout_predictions", [])  if existing else []
+
     update_fields = {
         "type": model_type,
         "filepath": filename,
@@ -68,8 +73,8 @@ def upload_model():
         "r_squared": _f("loso_r2"),
         "rmse":      _f("loso_rmse"),
         "mae":       _f("loso_mae"),
-        "feature_importance": [],
-        "holdout_predictions": [],
+        "feature_importance":  prev_fi,
+        "holdout_predictions": prev_hp,
         "uploaded_at": datetime.datetime.utcnow(),
         "uploaded_by": request.user["email"],
     }
