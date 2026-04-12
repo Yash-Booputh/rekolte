@@ -1,0 +1,51 @@
+# ── Claude Code ───────────────────────────────────────────────────────────────
+.claude/
+CLAUDE.md
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+sugarcane-yield-app/.env
+
+# ── Google service account key ────────────────────────────────────────────────
+*.json
+!sugarcane-yield-app/package.json
+!sugarcane-yield-app/tsconfig*.json
+!sugarcane-yield-app/ionic.config.json
+!sugarcane-yield-app/cypress.config.ts
+!model/Mapping/*.geojson
+!sugarcane-yield-app/public/*.geojson
+
+# ── Dev/test helpers (not needed in production) ───────────────────────────────
+rekolte-api/test_token.py
+rekolte-api/inspect_models.py
+
+# ── Node ──────────────────────────────────────────────────────────────────────
+node_modules/
+dist/
+.DS_Store
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── Raw PDFs — stored on Google Drive, not in repo ────────────────────────────
+Sugarcane Data/
+
+# ── Misc results/scratch images ───────────────────────────────────────────────
+result/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+Thumbs.db
+desktop.ini
+*.lnk
+
+model/old/
